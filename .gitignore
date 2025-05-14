@@ -1,0 +1,39 @@
+# Node.js (para backend e frontend)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Diretórios de build
+dist/
+build/
+.next/
+out/
+
+# Arquivos temporários
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.*.local
+
+# Prisma
+backendserver/prisma/dev.db
+backendserver/prisma/dev.db-journal
+
+# IDEs/editores
+.vscode/
+.idea/
+*.code-workspace
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Coverage (se usar testes futuramente)
+coverage/
