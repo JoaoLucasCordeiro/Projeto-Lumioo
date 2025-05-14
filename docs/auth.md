@@ -1,6 +1,6 @@
-# Autenticação no VigiaHub
+# Autenticação no VigiaLab
 
-O sistema de autenticação do VigiaHub é baseado em tokens JWT (JSON Web Token), garantindo segurança, escalabilidade e facilidade de integração entre front-end e back-end.
+O sistema de autenticação do VigiaLab é baseado em tokens JWT (JSON Web Token), garantindo segurança, escalabilidade e facilidade de integração entre front-end e back-end.
 
 ---
 

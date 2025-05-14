@@ -10,7 +10,7 @@ app.use(cors())
 app.use(express.json())
 
 app.get('/', (req, res) => {
-  res.send('VigiaHub API rodando com sucesso 🚀')
+  res.send('VigiaLab API rodando com sucesso 🚀')
 })
 
 const PORT = process.env.PORT || 3333

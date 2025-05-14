@@ -1,6 +1,6 @@
-# VigiaHub
+# VigiaLab
 
-**VigiaHub** é uma plataforma web voltada para o compartilhamento e observação de trabalhos acadêmicos. Inspirada no formato de redes como o LinkedIn, mas com foco em projetos científicos e pesquisas universitárias, a plataforma busca conectar estudantes, professores, pesquisadores e profissionais da academia.
+**VigiaLab** é uma plataforma web voltada para o compartilhamento e observação de trabalhos acadêmicos. Inspirada no formato de redes como o LinkedIn, mas com foco em projetos científicos e pesquisas universitárias, a plataforma busca conectar estudantes, professores, pesquisadores e profissionais da academia.
 
 ## 🎯 Objetivo
 
@@ -30,7 +30,7 @@ Oferecer um ambiente digital onde membros da comunidade acadêmica possam:
 ## 📂 Estrutura do Repositório
 
 ```
-vigiahub/
+VigiaLab/
 ├── backendserver/       # Back-end API (Express + TS)
 ├── frontendclient/      # Front-end SPA (React + TS)
 ├── docs/                # Documentação técnica

@@ -1,6 +1,6 @@
-# VigiaHub - Backend
+# VigiaLab - Backend
 
-Este é o backend da plataforma **VigiaHub**, uma rede social acadêmica desenvolvida com Node.js, Express e PostgreSQL.
+Este é o backend da plataforma **VigiaLab**, uma rede social acadêmica desenvolvida com Node.js, Express e PostgreSQL.
 
 ## 🚀 Tecnologias
 
@@ -28,7 +28,7 @@ npm install
 3. Configure o arquivo `.env` com suas variáveis de ambiente:
 
 ```env
-DATABASE_URL=postgresql://usuario:senha@localhost:5432/vigiahub
+DATABASE_URL=postgresql://usuario:senha@localhost:5432/VigiaLab
 PORT=3333
 ```
 
