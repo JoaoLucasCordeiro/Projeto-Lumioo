@@ -1,8 +1,8 @@
-# VigiaLab
+# Lumioo
 
-![Image](https://github.com/user-attachments/assets/c5339f33-bcab-4561-81a8-a73f30bda80b)
+<img width="1584" height="396" alt="Image" src="https://github.com/user-attachments/assets/219d4bcb-7403-4356-b245-fc4b946c76ce" />
 
-**VigiaLab** é uma plataforma web voltada para o compartilhamento e observação de trabalhos acadêmicos. Inspirada no formato de redes como o LinkedIn, mas com foco em projetos científicos e pesquisas universitárias, a plataforma busca conectar estudantes, professores, pesquisadores e profissionais da academia.
+**Lumioo** é uma plataforma web voltada para o compartilhamento e observação de trabalhos acadêmicos. Inspirada no formato de redes como o LinkedIn, mas com foco em projetos científicos e pesquisas universitárias, a plataforma busca conectar estudantes, professores, pesquisadores e profissionais da academia.
 
 ## 🎯 Objetivo
 
@@ -32,7 +32,7 @@ Oferecer um ambiente digital onde membros da comunidade acadêmica possam:
 ## 📂 Estrutura do Repositório
 
 ```
-VigiaLab/
+Lumioo/
 ├── backendserver/       # Back-end API (Express + TS)
 ├── frontendclient/      # Front-end SPA (React + TS)
 ├── docs/                # Documentação técnica
