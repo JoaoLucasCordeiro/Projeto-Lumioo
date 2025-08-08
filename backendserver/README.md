@@ -1,6 +1,6 @@
-# VigiaLab - Backend
+# Lumioo - Backend
 
-Este é o backend da plataforma **VigiaLab**, uma rede social acadêmica desenvolvida com Node.js, Express e PostgreSQL.
+Este é o backend da plataforma **Lumioo**, uma rede social acadêmica desenvolvida com Node.js, Express e PostgreSQL.
 
 ## 🚀 Tecnologias
 
