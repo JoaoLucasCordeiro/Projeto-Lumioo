@@ -1,6 +1,6 @@
-# VigiaLab - Frontend
+# Lumioo - Frontend
 
-Este é o frontend da plataforma **VigiaLab**, uma rede social acadêmica desenvolvida com React.js e TypeScript.
+Este é o frontend da plataforma **Lumioo**, uma rede social acadêmica desenvolvida com React.js e TypeScript.
 
 ## 🛠️ Tecnologias
 
