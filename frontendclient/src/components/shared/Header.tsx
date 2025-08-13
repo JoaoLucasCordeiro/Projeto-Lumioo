@@ -9,6 +9,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Link } from "react-router-dom";
+import { AnchorLink } from "./AnchorLink"; // Importe o componente criado
 
 export default function Header() {
   const [open, setOpen] = useState(false);
@@ -25,20 +26,20 @@ export default function Header() {
     <header className="fixed top-0 left-0 w-full z-50 bg-slate-900/50 backdrop-blur-lg border-b border-white/10 h-20">
       <div className="container mx-auto px-6 flex items-center justify-between h-full">
         {/* Logo */}
-        <Link to="#inicio" className="flex items-center space-x-2">
+        <AnchorLink to="#inicio" className="flex items-center space-x-2">
           <img src="/lumioo-header.png" alt="Lumioo" className="h-40 w-auto" />
-        </Link>
+        </AnchorLink>
 
         {/* Navegação Desktop */}
         <nav className="hidden md:flex items-center space-x-10">
           {navLinks.map((link) => (
-            <Link
+            <AnchorLink
               key={link.href}
               to={link.href}
               className="relative text-slate-300 font-medium transition-colors hover:text-white after:content-[''] after:block after:h-[2px] after:w-0 after:bg-red-500 after:mt-1 after:transition-all hover:after:w-full"
             >
               {link.label}
-            </Link>
+            </AnchorLink>
           ))}
 
           <Button
@@ -82,14 +83,14 @@ export default function Header() {
               {/* Links mobile */}
               <nav className="flex flex-col space-y-4 mt-4">
                 {navLinks.map((link) => (
-                  <Link
+                  <AnchorLink
                     key={link.href}
                     to={link.href}
                     className="text-slate-300 hover:text-white transition-colors font-medium"
                     onClick={() => setOpen(false)}
                   >
                     {link.label}
-                  </Link>
+                  </AnchorLink>
                 ))}
 
                 <Button

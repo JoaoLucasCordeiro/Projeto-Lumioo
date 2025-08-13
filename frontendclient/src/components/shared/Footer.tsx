@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone } from "lucide-react";
 import { Button } from "../ui/button";
+import { AnchorLink } from "./AnchorLink"; // Importe o componente AnchorLink
 
 export default function Footer() {
   return (
@@ -23,14 +23,14 @@ export default function Footer() {
             transition={{ duration: 0.6 }}
             className="space-y-6"
           >
-            <Link to="/" className="flex items-center">
+            <AnchorLink to="#inicio" className="flex items-center">
               <img
                 src="/lumioo-header.png"
                 alt="Logo Lumioo"
                 className="h-12 sm:h-24 md:h-20 lg:h-28 xl:h-32 w-auto max-w-full object-contain"
                 style={{ maxWidth: "100%" }}
               />
-            </Link>
+            </AnchorLink>
             <p className="text-slate-400">
               Conectando pesquisadores e potencializando a produção científica no Brasil.
             </p>
@@ -80,13 +80,13 @@ export default function Footer() {
               ].map((link, index) => (
                 <li key={index}>
                   <motion.div whileHover={{ x: 5 }}>
-                    <Link
+                    <AnchorLink
                       to={link.href}
                       className="text-slate-400 hover:text-red-400 transition-colors flex items-center"
                     >
                       <span className="w-1 h-1 bg-red-400 rounded-full mr-2"></span>
                       {link.name}
-                    </Link>
+                    </AnchorLink>
                   </motion.div>
                 </li>
               ))}
@@ -173,15 +173,24 @@ export default function Footer() {
             transition={{ duration: 0.6 }}
             className="flex flex-wrap justify-center gap-6"
           >
-            <Link to="/politica-de-privacidade" className="text-sm text-slate-500 hover:text-red-400 transition-colors">
+            <AnchorLink 
+              to="/politica-de-privacidade" 
+              className="text-sm text-slate-500 hover:text-red-400 transition-colors"
+            >
               Política de Privacidade
-            </Link>
-            <Link to="/termos-de-uso" className="text-sm text-slate-500 hover:text-red-400 transition-colors">
+            </AnchorLink>
+            <AnchorLink 
+              to="/termos-de-uso" 
+              className="text-sm text-slate-500 hover:text-red-400 transition-colors"
+            >
               Termos de Uso
-            </Link>
-            <Link to="/faq" className="text-sm text-slate-500 hover:text-red-400 transition-colors">
+            </AnchorLink>
+            <AnchorLink 
+              to="/faq" 
+              className="text-sm text-slate-500 hover:text-red-400 transition-colors"
+            >
               FAQ
-            </Link>
+            </AnchorLink>
           </motion.div>
         </div>
       </div>
