@@ -10,7 +10,7 @@ export default function Team() {
     {
       name: "João Lucas Soares",
       role: "Aluno - PIBIC",
-      image: "/joao-lucas.jpg",
+      image: "/joaolucas.jpg",
       initials: "JL",
       social: {
         linkedin: "#",
@@ -19,7 +19,7 @@ export default function Team() {
       }
     },
     {
-      name: "Ivaldir Honório de Farias Junior",
+      name: "Ivaldir Honório",
       role: "Professor e Orientador",
       image: "/ivaldir.jpg",
       initials: "IH",
@@ -162,25 +162,8 @@ export default function Team() {
               ))}
             </div>
             
-            {/* Logo da UPE - Layout corrigido */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, delay: 0.6 }}
-              className="mt-12 flex justify-center"
-            >
-              <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-lg p-4 w-full max-w-md">
-                <p className="text-slate-400 text-sm mb-3 text-center">Apoio institucional</p>
-                <div className="flex justify-center">
-                  <img 
-                    src="/upe-logo.png" 
-                    alt="Universidade de Pernambuco" 
-                    className="h-10 object-contain opacity-80 hover:opacity-100 transition-opacity"
-                  />
-                </div>
-              </div>
-            </motion.div>
+           
+          
           </motion.div>
         </div>
       </div>

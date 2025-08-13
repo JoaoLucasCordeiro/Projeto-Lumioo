@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { useMemo } from "react";
 import Objectives from "@/components/shared/Objectives";
 import Team from "@/components/shared/Team";
+import Contact from "@/components/shared/Contact";
+import Footer from "@/components/shared/Footer";
 
 const LandingPage = () => {
   const particles = useMemo(
@@ -21,16 +23,14 @@ const LandingPage = () => {
 
   return (
     <section className="relative bg-slate-900 overflow-hidden min-h-screen">
-      {/* Fundo com gradiente e blobs - ajustado para mobile */}
+
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-black to-slate-900"></div>
 
-        {/* Blobs com tamanho responsivo */}
         <div className="absolute top-1/4 left-1/4 w-48 h-48 md:w-96 md:h-96 bg-red-500/10 rounded-full blur-3xl animate-blob"></div>
         <div className="absolute bottom-1/4 right-1/4 w-48 h-48 md:w-96 md:h-96 bg-red-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
       </div>
 
-      {/* Partículas com z-index ajustado */}
       <div className="absolute inset-0 z-10 pointer-events-none">
         {particles.map((p, i) => (
           <motion.div
@@ -54,12 +54,11 @@ const LandingPage = () => {
         ))}
       </div>
 
-      {/* Header fixo com z-index adequado */}
       <Header />
 
       {/* Conteúdo principal com padding responsivo */}
-      <main className="relative z-20 pt-20 pb-10"> {/* pt-20 para compensar o header fixo */}
-        {/* Seções com padding vertical responsivo e altura mínima */}
+      <main className="relative z-20 pt-20 pb-10"> 
+
         <section id="inicio" className="min-h-[90vh] md:min-h-screen flex items-center py-10 px-4 sm:px-6">
           <Hero />
         </section>
@@ -77,14 +76,14 @@ const LandingPage = () => {
         </section>
 
         <section id="contato" className="min-h-[90vh] md:min-h-screen flex items-center py-20 px-4 sm:px-6">
-          <div className="text-center w-full">
-            <h2 className="text-2xl md:text-4xl font-bold text-slate-300 mb-6">Contato</h2>
-            <p className="text-slate-400 text-lg md:text-xl">Em construção</p>
-          </div>
+          <Contact />
+        </section>
+
+        <section className="w-full">
+          <Footer />
         </section>
       </main>
 
-      {/* Scroll suave */}
       <style>{`
         html {
           scroll-behavior: smooth;
