@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 
 export default function Hero() {
   return (
-    <section className="relative h-screen w-full overflow-hidden z-10">
+    <section className="relative h-screen w-full overflow-hidden z-10" >
       {/* Conteúdo Principal */}
       <div className="container mx-auto h-full flex items-center px-6 relative">
         {/* Lado Esquerdo: Texto e CTA */}
