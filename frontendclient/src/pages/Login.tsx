@@ -125,12 +125,15 @@ export default function LoginPage() {
 
                     {/* Botão de Login */}
                     <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
-                        <Button
-                            type="submit"
-                            className="w-full bg-gradient-to-r from-[#ff3131] to-red-600 hover:from-[#ff3131]/90 hover:to-red-600/90 text-white font-medium py-6 text-lg transition-all"
-                        >
-                            Entrar
-                        </Button>
+                        <Link to="/feed">
+                            <Button
+                                type="submit"
+                                className="w-full bg-gradient-to-r from-[#ff3131] to-red-600 hover:from-[#ff3131]/90 hover:to-red-600/90 text-white font-medium py-6 text-lg transition-all"
+                            >
+                                Entrar
+                            </Button>
+                        </Link>
+
                     </motion.div>
                 </form>
 
