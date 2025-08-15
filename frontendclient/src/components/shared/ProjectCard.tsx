@@ -1,8 +1,10 @@
 import { Users, Building2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from '../ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface ProjectCardProps {
+  id: string;
   title: string;
   description: string;
   category: string;
@@ -14,6 +16,7 @@ interface ProjectCardProps {
 }
 
 export function ProjectCard({
+  id,
   title,
   description,
   category,
@@ -23,8 +26,13 @@ export function ProjectCard({
   institution,
   status
 }: ProjectCardProps) {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors">
+    <div 
+      className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors cursor-pointer"
+      onClick={() => navigate(`/projetos/${id}`)}
+    >
       <div className="h-48 bg-slate-700 relative overflow-hidden">
         <img 
           src={image} 
@@ -65,7 +73,15 @@ export function ProjectCard({
             {status}
           </Badge>
           
-          <Button variant="outline" size="sm" className="border-red-500/50 text-red-400 hover:bg-red-900/20">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="border-red-500/50 text-red-400 hover:bg-red-900/20"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/projetos/${id}`);
+            }}
+          >
             Detalhes
           </Button>
         </div>
