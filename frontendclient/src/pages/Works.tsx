@@ -6,8 +6,8 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Sidebar } from "./Sidebar";
-import { Button } from "../ui/button";
+import { Sidebar } from "../components/shared/Sidebar";
+import { Button } from "../components/ui/button";
 
 export function WorksPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -100,13 +100,13 @@ export function WorksPage() {
 
   // Filtrar trabalhos
   const filteredWorks = academicWorks.filter(work => {
-    const matchesSearch = work.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         work.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         work.abstract.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = work.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      work.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      work.abstract.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType ? work.type === selectedType : true;
     const matchesYear = selectedYear ? work.year === selectedYear : true;
     const matchesArea = selectedArea ? work.area === selectedArea : true;
-    
+
     return matchesSearch && matchesType && matchesYear && matchesArea;
   });
 
@@ -121,7 +121,7 @@ export function WorksPage() {
       <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
       </div>
-      
+
       {/* Botão do Menu Mobile */}
       <div className="md:hidden fixed top-4 left-4 z-20">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
@@ -163,88 +163,103 @@ export function WorksPage() {
               </h2>
               <p className="text-slate-400 mt-2">TCCs, artigos, dissertações e teses da nossa universidade</p>
             </div>
-            <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-900/20">
-              <FileText className="h-5 w-5 mr-2" />
+            <Button
+              className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300 flex items-center px-4 py-2"
+            >
+              <FileText className="h-4 w-4 mr-2" />
               Submeter Trabalho
             </Button>
+
+
           </div>
 
           {/* Barra de Pesquisa e Filtros */}
           <div className="mb-8 space-y-4">
-            <div className="relative">
+            {/* Campo de Pesquisa */}
+            <div className="relative w-full">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
                 type="text"
                 placeholder="Pesquisar trabalhos, autores, palavras-chave..."
-                className="pl-10 bg-slate-800 border-slate-700 text-slate-200 focus-visible:ring-red-500 focus-visible:ring-offset-slate-900"
+                className="pl-10 bg-slate-800 border-slate-700 text-slate-200 focus-visible:ring-red-500 focus-visible:ring-offset-slate-900 w-full"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Filtros + Botão Limpar */}
+            <div className="flex flex-col md:flex-row gap-4 items-center">
               {/* Tipo */}
-              <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-slate-400" />
-                <Select onValueChange={(val) => setSelectedType(val === "all" ? "" : val)} value={selectedType || "all"}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+              <div className="flex-1 relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Select
+                  value={selectedType || "all"}
+                  onValueChange={(val) => setSelectedType(val === "all" ? "" : val)}
+                >
+                  <SelectTrigger className="w-full pl-10 bg-slate-800 border-slate-700 text-slate-200 flex items-center">
                     <SelectValue placeholder="Todos os tipos" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    <SelectItem value="all" className="text-slate-100">Todos os tipos</SelectItem>
                     {workTypes.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                      <SelectItem key={type} value={type} className="text-slate-100">{type}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Área */}
-              <div className="flex items-center space-x-2">
-                <BookOpen className="h-4 w-4 text-slate-400" />
-                <Select onValueChange={(val) => setSelectedArea(val === "all" ? "" : val)} value={selectedArea || "all"}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+              <div className="flex-1 relative">
+                <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Select
+                  value={selectedArea || "all"}
+                  onValueChange={(val) => setSelectedArea(val === "all" ? "" : val)}
+                >
+                  <SelectTrigger className="w-full pl-10 bg-slate-800 border-slate-700 text-slate-200 flex items-center">
                     <SelectValue placeholder="Todas as áreas" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all">Todas as áreas</SelectItem>
+                    <SelectItem value="all" className="text-slate-100">Todas as áreas</SelectItem>
                     {workAreas.map(area => (
-                      <SelectItem key={area} value={area}>{area}</SelectItem>
+                      <SelectItem key={area} value={area} className="text-slate-100">{area}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Ano */}
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-slate-400" />
-                <Select onValueChange={(val) => setSelectedYear(val === "all" ? "" : val)} value={selectedYear || "all"}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+              <div className="flex-1 relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Select
+                  value={selectedYear || "all"}
+                  onValueChange={(val) => setSelectedYear(val === "all" ? "" : val)}
+                >
+                  <SelectTrigger className="w-full pl-10 bg-slate-800 border-slate-700 text-slate-200 flex items-center">
                     <SelectValue placeholder="Todos os anos" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all">Todos os anos</SelectItem>
+                    <SelectItem value="all" className="text-slate-100">Todos os anos</SelectItem>
                     {workYears.map(year => (
-                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                      <SelectItem key={year} value={year} className="text-slate-100">{year}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="flex justify-end">
-              <Button 
-                variant="outline" 
-                className="border-slate-700 text-slate-300 hover:bg-slate-800/50"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedType("");
-                  setSelectedArea("");
-                  setSelectedYear("");
-                }}
-              >
-                Limpar filtros
-              </Button>
+              {/* Botão Limpar filtros */}
+              <div className="flex items-center">
+                <Button
+                  className="border-[#ff3131] bg-[#ff3131] text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:bg-red-600 hover:shadow-[#ff3131]/40 transition-all duration-300"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedType("");
+                    setSelectedArea("");
+                    setSelectedYear("");
+                  }}
+                >
+                  Limpar filtros
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -261,8 +276,8 @@ export function WorksPage() {
                   <Card className="bg-slate-800/50 border-slate-700 hover:border-red-500/30 transition-colors h-full flex flex-col">
                     <CardHeader className="p-0">
                       <div className="h-48 overflow-hidden rounded-t-lg">
-                        <img 
-                          src={work.image} 
+                        <img
+                          src={work.image}
                           alt={work.title}
                           className="w-full h-full object-cover"
                         />
@@ -280,9 +295,9 @@ export function WorksPage() {
                       <p className="text-sm text-slate-400 line-clamp-3 mb-4">{work.abstract}</p>
                       <div className="flex flex-wrap gap-2 mb-4">
                         {work.keywords.map(keyword => (
-                          <Badge 
-                            key={keyword} 
-                            variant="outline" 
+                          <Badge
+                            key={keyword}
+                            variant="outline"
                             className="bg-slate-700/50 border-slate-600 text-slate-300"
                           >
                             {keyword}
@@ -295,9 +310,9 @@ export function WorksPage() {
                         <Download className="h-4 w-4 mr-1" />
                         {work.downloads.toLocaleString()}
                       </span>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="border-red-500/50 text-red-400 hover:bg-red-900/20"
                         asChild
                       >
@@ -313,8 +328,8 @@ export function WorksPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-slate-400">Nenhum trabalho encontrado com os filtros selecionados</p>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="mt-4 text-red-400 hover:bg-red-900/20"
                 onClick={() => {
                   setSearchQuery("");

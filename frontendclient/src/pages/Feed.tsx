@@ -50,12 +50,12 @@ export function FeedPage() {
 
   return (
     <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
-      
+
       {/* Sidebar Desktop (fixa) */}
       <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
       </div>
-      
+
       {/* Botão do Menu Mobile */}
       <div className="md:hidden fixed top-4 left-4 z-20">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
@@ -107,9 +107,12 @@ export function FeedPage() {
                 Seu <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Feed</span>
               </h2>
             </div>
-            <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-900/20">
+            <Button
+              className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300"
+            >
               Novo Post
             </Button>
+
           </div>
 
           {/* Lista de Posts */}

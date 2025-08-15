@@ -12,7 +12,7 @@ export function ProfilePage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const isOwner = true; // Simulando que o usuário atual é dono do perfil
-  
+
   // Dados completos do usuário
   const userData = {
     fullName: "João Lucas",
@@ -36,7 +36,7 @@ export function ProfilePage() {
       id: '1',
       username: userData.username,
       userImage: userData.avatar,
-      image: '/post1.jpg',
+      image: '/joaolucas.jpg',
       caption: 'Novos resultados da nossa pesquisa em diagnóstico médico assistido por IA! #Saúde #IA',
       likes: 1243,
       comments: 42,
@@ -152,7 +152,7 @@ export function ProfilePage() {
       <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
       </div>
-      
+
       {/* Botão do Menu Mobile */}
       <div className="md:hidden fixed top-4 left-4 z-20">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
@@ -177,13 +177,13 @@ export function ProfilePage() {
         <div className="relative">
           {/* Foto de capa */}
           <div className="h-48 md:h-64 w-full bg-gradient-to-r from-slate-800 to-slate-900 overflow-hidden">
-            <img 
-              src={userData.coverPhoto} 
-              alt="Capa do perfil" 
+            <img
+              src={userData.coverPhoto}
+              alt="Capa do perfil"
               className="w-full h-full object-cover"
             />
           </div>
-          
+
           {/* Área de informações do perfil */}
           <div className="px-4 md:px-8 lg:px-12 relative z-10">
             <div className="flex flex-col md:flex-row md:items-end gap-6 -mt-16 mb-6">
@@ -196,8 +196,8 @@ export function ProfilePage() {
                   </AvatarFallback>
                 </Avatar>
                 {isEditing && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="icon"
                     className="absolute bottom-2 right-2 bg-slate-800/80 backdrop-blur-sm border-slate-700 text-slate-200 hover:bg-slate-700/80"
                   >
@@ -205,7 +205,7 @@ export function ProfilePage() {
                   </Button>
                 )}
               </div>
-              
+
               {/* Nome e ações */}
               <div className="flex-1 space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -213,36 +213,42 @@ export function ProfilePage() {
                     <h1 className="text-2xl md:text-3xl font-bold text-slate-100">{userData.fullName}</h1>
                     <p className="text-slate-400">@{userData.username}</p>
                   </div>
-                  
+
                   {isOwner ? (
                     <div className="flex gap-3">
                       {isEditing ? (
                         <>
-                          <Button 
-                            variant="outline" 
-                            className="border-slate-700 text-slate-300 hover:bg-slate-800/50"
+                          <Button
+                            variant="outline"
+                            className="border-red-500 text-red-400 hover:bg-red-900/20 hover:text-red-300"
                             onClick={() => setIsEditing(false)}
                           >
                             Cancelar
                           </Button>
+
                           <Button className="bg-red-600 hover:bg-red-700">
                             Salvar Alterações
                           </Button>
                         </>
                       ) : (
                         <>
-                          <Button 
-                            variant="outline" 
-                            className="border-red-500 text-red-400 hover:bg-red-900/20"
+                          <Button
+                            className="flex items-center gap-2 bg-[#ff3131] text-white font-bold border border-[#ff3131] shadow-lg shadow-[#ff3131]/20 hover:bg-red-600 hover:shadow-[#ff3131]/40 transition-all duration-300"
                             onClick={() => setIsEditing(true)}
                           >
-                            <Edit className="h-4 w-4 mr-2" />
+                            <Edit className="h-4 w-4" />
                             Editar Perfil
                           </Button>
-                          <Button variant="outline" className="border-slate-700 text-slate-300 hover:bg-slate-800/50">
+
+                          <Button
+                            variant="outline"
+                            className="border-red-500 text-red-400 hover:bg-red-900/20 hover:text-red-300"
+                          >
                             <Lock className="h-4 w-4 mr-2" />
                             Privacidade
                           </Button>
+
+
                         </>
                       )}
                     </div>
@@ -257,7 +263,7 @@ export function ProfilePage() {
                     </div>
                   )}
                 </div>
-                
+
                 {/* Bio */}
                 {isEditing ? (
                   <textarea
@@ -268,7 +274,7 @@ export function ProfilePage() {
                 ) : (
                   <p className="text-slate-300">{userData.bio}</p>
                 )}
-                
+
                 {/* Estatísticas */}
                 <div className="flex gap-6 text-sm">
                   <div className="flex items-center gap-1 text-slate-400">
@@ -292,16 +298,23 @@ export function ProfilePage() {
         {/* Abas do perfil */}
         <Tabs defaultValue="posts" className="px-4 md:px-8 lg:px-12">
           <TabsList className="grid w-full grid-cols-2 bg-slate-900 border-b border-slate-800 rounded-none">
-            <TabsTrigger 
-              value="posts" 
-              className="flex items-center gap-2 data-[state=active]:text-red-400 data-[state=active]:border-b-2 data-[state=active]:border-red-500"
+            <TabsTrigger
+              value="posts"
+              className="flex items-center gap-2 text-white 
+                 data-[state=active]:bg-[#ff3131] data-[state=active]:shadow-lg data-[state=active]:shadow-[#ff3131]/20 
+                 hover:bg-red-600 hover:shadow-lg hover:shadow-[#ff3131]/40 
+                 transition-all duration-300 border border-transparent data-[state=active]:border-[#ff3131]"
             >
               <Grid3x3 className="h-4 w-4" />
               Publicações
             </TabsTrigger>
-            <TabsTrigger 
-              value="saved" 
-              className="flex items-center gap-2 data-[state=active]:text-red-400 data-[state=active]:border-b-2 data-[state=active]:border-red-500"
+
+            <TabsTrigger
+              value="saved"
+              className="flex items-center gap-2 text-white 
+                 data-[state=active]:bg-[#ff3131] data-[state=active]:shadow-lg data-[state=active]:shadow-[#ff3131]/20 
+                 hover:bg-red-600 hover:shadow-lg hover:shadow-[#ff3131]/40 
+                 transition-all duration-300 border border-transparent data-[state=active]:border-[#ff3131]"
             >
               <Bookmark className="h-4 w-4" />
               Salvos
@@ -367,7 +380,7 @@ export function ProfilePage() {
           <div className="px-4 md:px-8 lg:px-12 py-8">
             <div className="max-w-4xl mx-auto">
               <h2 className="text-xl font-bold text-slate-100 mb-6">Informações do Perfil</h2>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 {/* Informação 1 - Email */}
                 <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700/50">
@@ -389,7 +402,7 @@ export function ProfilePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Informação 2 - Instituição */}
                 <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700/50">
                   <div className="flex items-center gap-3 mb-3">
@@ -410,7 +423,7 @@ export function ProfilePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Informação 3 - Nível Acadêmico */}
                 <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700/50">
                   <div className="flex items-center gap-3 mb-3">
@@ -435,7 +448,7 @@ export function ProfilePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Informação 4 - Data de Nascimento */}
                 <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700/50">
                   <div className="flex items-center gap-3 mb-3">

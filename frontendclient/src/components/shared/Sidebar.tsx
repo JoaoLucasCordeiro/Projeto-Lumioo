@@ -116,9 +116,10 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-slate-700 text-slate-200 hover:bg-slate-700/50">
-              Cancelar
-            </AlertDialogCancel>
+           <AlertDialogCancel className="bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-200">
+  Cancelar
+</AlertDialogCancel>
+
             <AlertDialogAction
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700"

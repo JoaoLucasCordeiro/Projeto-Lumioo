@@ -8,7 +8,7 @@ import { FeedPage } from './pages/Feed';
 import { ProjectsPage } from './pages/Projects';
 import { ProfilePage } from './pages/Profile';
 import { SettingsPage } from './pages/SettingsPage';
-import { WorksPage } from './components/shared/Works';
+import { WorksPage } from './pages/Works';
 
 const App = () => {
   return (

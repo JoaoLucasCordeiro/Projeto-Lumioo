@@ -92,11 +92,11 @@ export function ProjectsPage() {
 
   // Filtrar projetos
   const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         project.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "all" ? true : project.category === selectedCategory;
     const matchesYear = selectedYear === "all" ? true : project.year === selectedYear;
-    
+
     return matchesSearch && matchesCategory && matchesYear;
   });
 
@@ -111,7 +111,7 @@ export function ProjectsPage() {
       <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
       </div>
-      
+
       {/* Botão do Menu Mobile */}
       <div className="md:hidden fixed top-4 left-4 z-20">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
@@ -150,9 +150,12 @@ export function ProjectsPage() {
             <h2 className="text-3xl font-bold text-slate-100">
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Projetos de Pesquisa</span>
             </h2>
-            <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-900/20">
+            <Button
+              className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300"
+            >
               Novo Projeto
             </Button>
+
           </div>
 
           {/* Barra de Pesquisa e Filtros */}
@@ -169,39 +172,46 @@ export function ProjectsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-slate-400" />
+
+              <div className="flex-1">
                 <Select onValueChange={setSelectedCategory} value={selectedCategory}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+                  <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-slate-200 flex items-center">
+                    <Filter className="h-4 w-4 text-slate-400 mr-2" />
                     <SelectValue placeholder="Todos os nichos" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all">Todos os nichos</SelectItem>
+                    <SelectItem className="text-slate-100" value="all">Todos os nichos</SelectItem>
                     {categories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                      <SelectItem key={category} className="text-slate-100" value={category}>
+                        {category}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-slate-400" />
+              <div className="flex-1">
                 <Select onValueChange={setSelectedYear} value={selectedYear}>
-                  <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
+                  <SelectTrigger className="w-full bg-slate-800 border-slate-700 text-slate-200 flex items-center">
+                    <Calendar className="h-4 w-4 text-slate-400 mr-2" />
                     <SelectValue placeholder="Todos os anos" />
                   </SelectTrigger>
                   <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all">Todos os anos</SelectItem>
+                    <SelectItem className="text-slate-100" value="all">Todos os anos</SelectItem>
                     {years.map(year => (
-                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                      <SelectItem key={year} className="text-slate-100" value={year}>
+                        {year}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button 
-                variant="outline" 
-                className="border-slate-700 text-slate-300 hover:bg-slate-800/50"
+
+
+
+              <Button
+                className="border-[#ff3131] bg-[#ff3131] text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:bg-red-600 hover:shadow-[#ff3131]/40 transition-all duration-300"
                 onClick={() => {
                   setSearchQuery("");
                   setSelectedCategory("all");
@@ -210,6 +220,7 @@ export function ProjectsPage() {
               >
                 Limpar filtros
               </Button>
+
             </div>
           </div>
 
@@ -230,9 +241,8 @@ export function ProjectsPage() {
           ) : (
             <div className="text-center py-12">
               <p className="text-slate-400">Nenhum projeto encontrado com os filtros selecionados</p>
-              <Button 
-                variant="ghost" 
-                className="mt-4 text-red-400 hover:bg-red-900/20"
+              <Button
+                className="mt-4 bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300"
                 onClick={() => {
                   setSearchQuery("");
                   setSelectedCategory("all");
@@ -241,6 +251,7 @@ export function ProjectsPage() {
               >
                 Limpar filtros
               </Button>
+
             </div>
           )}
         </motion.div>
