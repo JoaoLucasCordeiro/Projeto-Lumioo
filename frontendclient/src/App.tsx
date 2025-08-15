@@ -9,6 +9,8 @@ import { ProjectsPage } from './pages/Projects';
 import { ProfilePage } from './pages/Profile';
 import { SettingsPage } from './pages/SettingsPage';
 import { WorksPage } from './pages/Works';
+import { ProjectDetailsPage } from './pages/ProjectDetails';
+import { WorkDetails } from './pages/WorksDetails';
 
 const App = () => {
   return (
@@ -21,14 +23,14 @@ const App = () => {
         <Route path="/feed" element={<FeedPage />} />
         <Route path="/configuracoes" element={<SettingsPage />} />
         <Route path="/trabalhos" element={<WorksPage />} />
+        <Route path="/trabalhos/:id" element={<WorkDetails />} />
         <Route path="/posts" element={<AllPosts />} />
         <Route path="/projetos" element={<ProjectsPage />} />
+        <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
         <Route path="/post/:id" element={<PostDetails />} />
       </Routes>
     </BrowserRouter>
   );
-
-  
 }
 
 export default App;
