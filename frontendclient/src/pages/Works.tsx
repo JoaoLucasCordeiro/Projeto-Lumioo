@@ -158,7 +158,7 @@ export function WorksPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-6xl"
         >
-          <WorksHeader isMobile={false} onUpload={handleUpload} />
+          <WorksHeader isMobile={false}  />
 
           <WorksFilters
             searchQuery={searchQuery}
