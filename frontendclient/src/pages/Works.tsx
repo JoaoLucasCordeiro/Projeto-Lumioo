@@ -120,10 +120,7 @@ export function WorksPage() {
     setSelectedYear("");
   };
 
-  const handleUpload = () => {
-    // Lógica para submissão de novo trabalho
-    console.log("Submeter novo trabalho");
-  };
+
 
   return (
     <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
