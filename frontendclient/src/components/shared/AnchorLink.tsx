@@ -6,7 +6,7 @@ interface AnchorLinkProps {
   children: ReactNode;
   className?: string;
   onClick?: () => void;
-  offset?: number; // Novo prop opcional para offset personalizado
+  offset?: number; 
 }
 
 export function AnchorLink({ 
@@ -14,14 +14,13 @@ export function AnchorLink({
   children, 
   className, 
   onClick, 
-  offset = 80 // Valor padrão de 80px (altura do header)
+  offset = 80
 }: AnchorLinkProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     const element = document.querySelector(to);
     
     if (element) {
-      // Calcula a posição considerando o offset do header
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
 
@@ -30,7 +29,6 @@ export function AnchorLink({
         behavior: "smooth"
       });
 
-      // Atualiza a URL sem recarregar a página
       window.history.pushState(null, '', to);
     }
     
