@@ -1,12 +1,18 @@
 import { FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 
 interface WorksHeaderProps {
   isMobile: boolean;
-  onUpload?: () => void;
 }
 
-export function WorksHeader({ isMobile, onUpload }: WorksHeaderProps) {
+export function WorksHeader({ isMobile }: WorksHeaderProps) {
+  const navigate = useNavigate();
+
+  const handleUploadClick = () => {
+    navigate('/submeter-trabalho');
+  };
+
   if (isMobile) {
     return (
       <div className="flex items-center justify-between mb-8 pt-12">
@@ -15,6 +21,14 @@ export function WorksHeader({ isMobile, onUpload }: WorksHeaderProps) {
             Trabalhos Acadêmicos
           </span>
         </h2>
+        <Button
+          variant="outline"
+          className="border-red-500 text-red-400 hover:bg-red-900/20"
+          onClick={handleUploadClick}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Submeter
+        </Button>
       </div>
     );
   }
@@ -31,7 +45,7 @@ export function WorksHeader({ isMobile, onUpload }: WorksHeaderProps) {
       </div>
       <Button
         className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300 flex items-center px-4 py-2"
-        onClick={onUpload}
+        onClick={handleUploadClick}
       >
         <FileText className="h-4 w-4 mr-2" />
         Submeter Trabalho
