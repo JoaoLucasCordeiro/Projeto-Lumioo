@@ -13,6 +13,7 @@ import { ProjectDetailsPage } from './pages/ProjectDetails';
 import { WorkDetails } from './pages/WorksDetails';
 import { NewPostPage } from './pages/NewPost';
 import { SubmitWorkPage } from './pages/SubmitWork';
+import { NewProjectPage } from './pages/NewProject';
 
 const App = () => {
   return (
@@ -28,6 +29,7 @@ const App = () => {
         <Route path="/trabalhos/:id" element={<WorkDetails />} />
         <Route path="/submeter-trabalho" element={<SubmitWorkPage />} />
         <Route path="/posts" element={<AllPosts />} />
+        <Route path="/novo-projeto" element={<NewProjectPage />} />
         <Route path="/projetos" element={<ProjectsPage />} />
         <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
         <Route path="/new-post" element={<NewPostPage />} />
