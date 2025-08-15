@@ -12,6 +12,7 @@ import { WorksPage } from './pages/Works';
 import { ProjectDetailsPage } from './pages/ProjectDetails';
 import { WorkDetails } from './pages/WorksDetails';
 import { NewPostPage } from './pages/NewPost';
+import { SubmitWorkPage } from './pages/SubmitWork';
 
 const App = () => {
   return (
@@ -25,6 +26,7 @@ const App = () => {
         <Route path="/configuracoes" element={<SettingsPage />} />
         <Route path="/trabalhos" element={<WorksPage />} />
         <Route path="/trabalhos/:id" element={<WorkDetails />} />
+        <Route path="/submeter-trabalho" element={<SubmitWorkPage />} />
         <Route path="/posts" element={<AllPosts />} />
         <Route path="/projetos" element={<ProjectsPage />} />
         <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
