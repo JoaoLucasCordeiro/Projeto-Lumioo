@@ -11,6 +11,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { WorksPage } from './pages/Works';
 import { ProjectDetailsPage } from './pages/ProjectDetails';
 import { WorkDetails } from './pages/WorksDetails';
+import { NewPostPage } from './pages/NewPost';
 
 const App = () => {
   return (
@@ -27,6 +28,7 @@ const App = () => {
         <Route path="/posts" element={<AllPosts />} />
         <Route path="/projetos" element={<ProjectsPage />} />
         <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
+        <Route path="/new-post" element={<NewPostPage />} />
         <Route path="/post/:id" element={<PostDetails />} />
       </Routes>
     </BrowserRouter>
