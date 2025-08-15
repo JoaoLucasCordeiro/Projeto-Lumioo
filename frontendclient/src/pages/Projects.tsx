@@ -13,6 +13,7 @@ import {
 import { Sidebar } from "@/components/shared/Sidebar";
 import { Button } from "@/components/ui/button";
 import { ProjectCard } from "@/components/shared/ProjectCard";
+import { useNavigate } from "react-router-dom";
 
 export function ProjectsPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -105,6 +106,8 @@ export function ProjectsPage() {
   // Anos únicos para o filtro
   const years = [...new Set(projects.map(p => p.year))].sort((a, b) => b.localeCompare(a));
 
+  const navigate = useNavigate();
+
   return (
     <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
       {/* Sidebar Desktop (fixa) */}
@@ -152,10 +155,10 @@ export function ProjectsPage() {
             </h2>
             <Button
               className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300"
+              onClick={() => navigate('/novo-projeto')}
             >
               Novo Projeto
             </Button>
-
           </div>
 
           {/* Barra de Pesquisa e Filtros */}
@@ -206,9 +209,6 @@ export function ProjectsPage() {
                   </SelectContent>
                 </Select>
               </div>
-
-
-
 
               <Button
                 className="border-[#ff3131] bg-[#ff3131] text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:bg-red-600 hover:shadow-[#ff3131]/40 transition-all duration-300"
