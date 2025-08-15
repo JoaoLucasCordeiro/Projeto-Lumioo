@@ -1,23 +1,14 @@
 import { motion } from "framer-motion";
-import { Input } from "@/components/ui/input";
-import { Search, Menu, Filter, FileText, BookOpen, Calendar, Download } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Menu } from "lucide-react";
 import { useState } from "react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Sidebar } from "../components/shared/Sidebar";
-import { Button } from "../components/ui/button";
+import { Sidebar } from "@/components/shared/Sidebar";
+import { Button } from "@/components/ui/button";
+import { WorksHeader } from "@/components/shared/WorksHeader";
+import { WorksFilters } from "@/components/shared/WorksFilter";
+import { WorksGrid } from "@/components/shared/WroksGrid";
 
-export function WorksPage() {
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedType, setSelectedType] = useState("");
-  const [selectedYear, setSelectedYear] = useState("");
-  const [selectedArea, setSelectedArea] = useState("");
-
-  // Trabalhos acadêmicos (dados de exemplo)
-  const academicWorks = [
+const academicWorks = [
     {
       id: '1',
       title: 'Inteligência Artificial no Diagnóstico de Doenças Raras',
@@ -98,6 +89,13 @@ export function WorksPage() {
     }
   ];
 
+export function WorksPage() {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedType, setSelectedType] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
+  const [selectedArea, setSelectedArea] = useState("");
+
   // Filtrar trabalhos
   const filteredWorks = academicWorks.filter(work => {
     const matchesSearch = work.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -114,6 +112,18 @@ export function WorksPage() {
   const workTypes = [...new Set(academicWorks.map(work => work.type))];
   const workYears = [...new Set(academicWorks.map(work => work.year))].sort((a, b) => b.localeCompare(a));
   const workAreas = [...new Set(academicWorks.map(work => work.area))];
+
+  const handleClearFilters = () => {
+    setSearchQuery("");
+    setSelectedType("");
+    setSelectedArea("");
+    setSelectedYear("");
+  };
+
+  const handleUpload = () => {
+    // Lógica para submissão de novo trabalho
+    console.log("Submeter novo trabalho");
+  };
 
   return (
     <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
@@ -148,199 +158,33 @@ export function WorksPage() {
           transition={{ duration: 0.5 }}
           className="w-full max-w-6xl"
         >
-          {/* Cabeçalho Mobile */}
-          <div className="md:hidden flex items-center justify-between mb-8 pt-12">
-            <h2 className="text-2xl font-bold text-slate-100">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Trabalhos Acadêmicos</span>
-            </h2>
-          </div>
+          <WorksHeader isMobile={false} onUpload={handleUpload} />
 
-          {/* Cabeçalho Desktop */}
-          <div className="hidden md:flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-slate-100">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Repositório Acadêmico</span>
-              </h2>
-              <p className="text-slate-400 mt-2">TCCs, artigos, dissertações e teses da nossa universidade</p>
-            </div>
+          <WorksFilters
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedType={selectedType}
+            setSelectedType={setSelectedType}
+            selectedArea={selectedArea}
+            setSelectedArea={setSelectedArea}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+            workTypes={workTypes}
+            workAreas={workAreas}
+            workYears={workYears}
+            onClearFilters={handleClearFilters}
+          />
+
+          <WorksGrid works={filteredWorks} />
+
+          {filteredWorks.length === 0 && (
             <Button
-              className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300 flex items-center px-4 py-2"
+              variant="ghost"
+              className="mt-4 text-red-400 hover:bg-red-900/20 mx-auto block"
+              onClick={handleClearFilters}
             >
-              <FileText className="h-4 w-4 mr-2" />
-              Submeter Trabalho
+              Limpar filtros
             </Button>
-
-
-          </div>
-
-          {/* Barra de Pesquisa e Filtros */}
-          <div className="mb-8 space-y-4">
-            {/* Campo de Pesquisa */}
-            <div className="relative w-full">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                type="text"
-                placeholder="Pesquisar trabalhos, autores, palavras-chave..."
-                className="pl-10 bg-slate-800 border-slate-700 text-slate-200 focus-visible:ring-red-500 focus-visible:ring-offset-slate-900 w-full"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            {/* Filtros + Botão Limpar */}
-            <div className="flex flex-col md:flex-row gap-4 items-center">
-              {/* Tipo */}
-              <div className="flex-1 relative">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Select
-                  value={selectedType || "all"}
-                  onValueChange={(val) => setSelectedType(val === "all" ? "" : val)}
-                >
-                  <SelectTrigger className="w-full pl-10 bg-slate-800 border-slate-700 text-slate-200 flex items-center">
-                    <SelectValue placeholder="Todos os tipos" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all" className="text-slate-100">Todos os tipos</SelectItem>
-                    {workTypes.map(type => (
-                      <SelectItem key={type} value={type} className="text-slate-100">{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Área */}
-              <div className="flex-1 relative">
-                <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Select
-                  value={selectedArea || "all"}
-                  onValueChange={(val) => setSelectedArea(val === "all" ? "" : val)}
-                >
-                  <SelectTrigger className="w-full pl-10 bg-slate-800 border-slate-700 text-slate-200 flex items-center">
-                    <SelectValue placeholder="Todas as áreas" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all" className="text-slate-100">Todas as áreas</SelectItem>
-                    {workAreas.map(area => (
-                      <SelectItem key={area} value={area} className="text-slate-100">{area}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Ano */}
-              <div className="flex-1 relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Select
-                  value={selectedYear || "all"}
-                  onValueChange={(val) => setSelectedYear(val === "all" ? "" : val)}
-                >
-                  <SelectTrigger className="w-full pl-10 bg-slate-800 border-slate-700 text-slate-200 flex items-center">
-                    <SelectValue placeholder="Todos os anos" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
-                    <SelectItem value="all" className="text-slate-100">Todos os anos</SelectItem>
-                    {workYears.map(year => (
-                      <SelectItem key={year} value={year} className="text-slate-100">{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Botão Limpar filtros */}
-              <div className="flex items-center">
-                <Button
-                  className="border-[#ff3131] bg-[#ff3131] text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:bg-red-600 hover:shadow-[#ff3131]/40 transition-all duration-300"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedType("");
-                    setSelectedArea("");
-                    setSelectedYear("");
-                  }}
-                >
-                  Limpar filtros
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          {/* Lista de Trabalhos */}
-          {filteredWorks.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredWorks.map((work, index) => (
-                <motion.div
-                  key={work.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                  <Card className="bg-slate-800/50 border-slate-700 hover:border-red-500/30 transition-colors h-full flex flex-col">
-                    <CardHeader className="p-0">
-                      <div className="h-48 overflow-hidden rounded-t-lg">
-                        <img
-                          src={work.image}
-                          alt={work.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 flex-1">
-                      <div className="flex justify-between items-start mb-2">
-                        <Badge variant="outline" className="bg-red-900/20 border-red-700/50 text-red-400">
-                          {work.type}
-                        </Badge>
-                        <span className="text-sm text-slate-400">{work.year}</span>
-                      </div>
-                      <h3 className="text-lg font-bold text-slate-100 mb-2 line-clamp-2">{work.title}</h3>
-                      <p className="text-sm text-slate-300 mb-3">{work.author}</p>
-                      <p className="text-sm text-slate-400 line-clamp-3 mb-4">{work.abstract}</p>
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {work.keywords.map(keyword => (
-                          <Badge
-                            key={keyword}
-                            variant="outline"
-                            className="bg-slate-700/50 border-slate-600 text-slate-300"
-                          >
-                            {keyword}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-4 border-t border-slate-700/50 flex justify-between items-center">
-                      <span className="text-sm text-slate-400 flex items-center">
-                        <Download className="h-4 w-4 mr-1" />
-                        {work.downloads.toLocaleString()}
-                      </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-red-500/50 text-red-400 hover:bg-red-900/20"
-                        asChild
-                      >
-                        <a href={work.fileUrl} download>
-                          Baixar
-                        </a>
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-slate-400">Nenhum trabalho encontrado com os filtros selecionados</p>
-              <Button
-                variant="ghost"
-                className="mt-4 text-red-400 hover:bg-red-900/20"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedType("");
-                  setSelectedArea("");
-                  setSelectedYear("");
-                }}
-              >
-                Limpar filtros
-              </Button>
-            </div>
           )}
         </motion.div>
       </main>
