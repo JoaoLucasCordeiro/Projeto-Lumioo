@@ -19,7 +19,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    // Aqui você faria a chamada API para revogar o token se necessário
     localStorage.removeItem('token');
     setToken(null);
   };
