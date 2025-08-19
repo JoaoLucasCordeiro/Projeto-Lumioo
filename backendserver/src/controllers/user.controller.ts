@@ -1,37 +1,39 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-/**
- * Creates a new user.
- * @param req - The request object.
- * @param res - The response object.
- */
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { fullName, academicEmail, username, institution, academicLevel, dateOfBirth } = req.body;
+    const { fullName, academicEmail, username, password, institution, academicLevel, dateOfBirth } = req.body;
 
     // Basic validation
-    if (!fullName || !academicEmail || !username || !institution || !academicLevel || !dateOfBirth) {
+    if (!fullName || !academicEmail || !username || !password || !institution || !academicLevel || !dateOfBirth) {
       return res.status(400).json({ error: 'All fields are required.' });
     }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10); // 10 is the salt rounds
 
     const newUser = await prisma.user.create({
       data: {
         fullName,
         academicEmail,
         username,
+        password: hashedPassword, // <-- Save the hashed password
         institution,
         academicLevel,
-        dateOfBirth: new Date(dateOfBirth), // Ensure date is in correct format
+        dateOfBirth: new Date(dateOfBirth),
       },
     });
+    
+    // Do not return the password in the response
+    const { password: _, ...userWithoutPassword } = newUser;
 
-    res.status(201).json(newUser);
+    res.status(201).json(userWithoutPassword);
   } catch (error) {
     console.error('Error creating user:', error);
-    // Handle potential unique constraint errors
     if (error instanceof Error && 'code' in error && (error as any).code === 'P2002') {
         return res.status(409).json({ error: 'Email or username already exists.' });
     }
@@ -39,11 +41,6 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retrieves all users.
- * @param req - The request object.
- * @param res - The response object.
- */
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany();
@@ -54,11 +51,6 @@ export const getAllUsers = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Retrieves a single user by their ID.
- * @param req - The request object.
- * @param res - The response object.
- */
 export const getUserById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -77,11 +69,7 @@ export const getUserById = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Updates an existing user by their ID.
- * @param req - The request object.
- * @param res - The response object.
- */
+
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -109,11 +97,7 @@ export const updateUser = async (req: Request, res: Response) => {
   }
 };
 
-/**
- * Deletes a user by their ID.
- * @param req - The request object.
- * @param res - The response object.
- */
+
 export const deleteUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -121,10 +105,9 @@ export const deleteUser = async (req: Request, res: Response) => {
       where: { id },
     });
 
-    res.status(204).send(); // No content on successful deletion
+    res.status(204).send(); 
   } catch (error) {
     console.error('Error deleting user:', error);
-    // Handle case where user to delete is not found
     if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
         return res.status(404).json({ error: 'User not found.' });
     }
