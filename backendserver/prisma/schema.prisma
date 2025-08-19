@@ -25,8 +25,7 @@ model User {
   dateOfBirth     DateTime
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
-  posts           Post[] // <-- Adiciona a relação: um usuário pode ter vários posts
-
+  posts           Post[] 
   @@map("users")
 }
 
@@ -34,9 +33,9 @@ model User {
 model Post {
   id        String   @id @default(cuid())
   caption   String
-  image     String   // Armazenaremos a string Base64 aqui
-  location  String?  // O '?' torna o campo opcional
-  hashtags  String[] // Suporte nativo a array de strings no PostgreSQL
+  image     String   
+  location  String?  
+  hashtags  String[] 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
