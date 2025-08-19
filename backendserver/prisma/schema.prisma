@@ -3,11 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
 }
-
-// Enum for the academic level of the user
 enum AcademicLevel {
   UNDERGRADUATE
   MASTER
@@ -21,11 +19,30 @@ model User {
   fullName        String
   academicEmail   String        @unique
   username        String        @unique
+  password        String
   institution     String
   academicLevel   AcademicLevel
   dateOfBirth     DateTime
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  posts           Post[] // <-- Adiciona a relação: um usuário pode ter vários posts
 
   @@map("users")
+}
+
+// Post model definition
+model Post {
+  id        String   @id @default(cuid())
+  caption   String
+  image     String   // Armazenaremos a string Base64 aqui
+  location  String?  // O '?' torna o campo opcional
+  hashtags  String[] // Suporte nativo a array de strings no PostgreSQL
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relação com o usuário que criou o post
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String
+
+  @@map("posts")
 }
