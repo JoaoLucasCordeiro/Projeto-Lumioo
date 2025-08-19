@@ -8,6 +8,7 @@ import commentRoutes from './routes/comment.routes';
 import likeRoutes from './routes/like.routes';
 import savedPostRoutes from './routes/savedPost.routes';
 import projectRoutes from './routes/project.routes';
+import workRoutes from './routes/work.routes';
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.use('/api/v1/lumioo', commentRoutes);
 app.use('/api/v1/lumioo', likeRoutes);
 app.use('/api/v1/lumioo', savedPostRoutes);
 app.use('/api/v1/lumioo', projectRoutes);
+app.use('/api/v1/lumioo', workRoutes);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
