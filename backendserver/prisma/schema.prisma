@@ -31,6 +31,7 @@ model User {
   likes           Like[]
   savedPosts      SavedPost[]   @relation("SavedByUsers")
   projects        Project[]
+  works           Work[]
   
   @@map("users")
 }
@@ -132,9 +133,39 @@ model TeamMember {
   role      String
   photo     String?
   
-  // Relação com o projeto ao qual pertence
   project   Project  @relation(fields: [projectId], references: [id])
   projectId String
 
   @@map("team_members")
+}
+
+enum WorkType {
+  TCC
+  ARTICLE
+  THESIS 
+  DISSERTATION 
+}
+
+model Work {
+  id           String   @id @default(cuid())
+  title        String
+  workType     WorkType
+  coverImage   String?
+  summary      String   @db.Text 
+  description  String   @db.Text
+  keywords     String[] 
+  references   String[] 
+  advisor      String   
+  institution  String
+  department   String?  
+  pdfFile      String   @db.Text 
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relação com o autor/uploader do trabalho
+  author       User     @relation(fields: [authorId], references: [id])
+  authorId     String
+
+  @@map("works")
 }
