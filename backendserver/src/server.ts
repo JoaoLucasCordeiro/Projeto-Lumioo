@@ -4,9 +4,10 @@ import dotenv from 'dotenv';
 import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
 import postRoutes from './routes/post.routes';
-import likeRoutes from './routes/like.routes';
 import commentRoutes from './routes/comment.routes';
+import likeRoutes from './routes/like.routes';
 import savedPostRoutes from './routes/savedPost.routes';
+import projectRoutes from './routes/project.routes';
 
 dotenv.config();
 
@@ -24,8 +25,9 @@ app.use('/api/v1/lumioo', userRoutes);
 app.use('/api/v1/lumioo/auth', authRoutes);
 app.use('/api/v1/lumioo', postRoutes);
 app.use('/api/v1/lumioo', commentRoutes);
-app.use('/api/v1/lumioo', likeRoutes);     
-app.use('/api/v1/lumioo', savedPostRoutes); 
+app.use('/api/v1/lumioo', likeRoutes);
+app.use('/api/v1/lumioo', savedPostRoutes);
+app.use('/api/v1/lumioo', projectRoutes);
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
