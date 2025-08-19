@@ -8,11 +8,11 @@ import { Button } from "../components/ui/button";
 import { useState } from "react";
 
 export function AllPosts() {
+
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  
-  // Posts recomendados (dados de exemplo)
-  const recommendedPosts = [
+
+    const recommendedPosts = [
     {
       id: '4',
       username: 'astro_fisica',
@@ -87,7 +87,6 @@ export function AllPosts() {
     }
   ];
 
-  // Filtrar posts baseado na pesquisa
   const filteredPosts = recommendedPosts.filter(post =>
     post.caption.toLowerCase().includes(searchQuery.toLowerCase()) ||
     post.username.toLowerCase().includes(searchQuery.toLowerCase())
