@@ -1,19 +1,26 @@
-import express from 'express'
-import cors from 'cors'
-import dotenv from 'dotenv'
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import userRoutes from './routes/user.routes';
 
-dotenv.config()
+dotenv.config();
 
-const app = express()
+const app = express();
 
-app.use(cors())
-app.use(express.json())
+// Middlewares
+app.use(cors());
+app.use(express.json());
 
+// API Welcome Route
 app.get('/', (req, res) => {
-  res.send('VigiaLab API rodando com sucesso 🚀')
-})
+  res.send('Lumioo API rodando com sucesso 🚀');
+});
 
-const PORT = process.env.PORT || 3333
+// Main API Routes v1
+app.use('/api/v1/lumioo', userRoutes); 
+
+// Server Initialization
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`)
-})
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
