@@ -30,7 +30,8 @@ model User {
   comments        Comment[]
   likes           Like[]
   savedPosts      SavedPost[]   @relation("SavedByUsers")
-
+  projects        Project[]
+  
   @@map("users")
 }
 
@@ -95,4 +96,45 @@ model SavedPost {
 
   @@id([userId, postId])
   @@map("saved_posts")
+}
+
+enum ProjectStatus {
+  IN_PROGRESS
+  COMPLETED
+  OPEN_FOR_APPLICATIONS
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  title         String
+  description   String
+  image         String?
+  status        ProjectStatus
+  contactEmail  String?
+  contactPhone  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relação com o dono do projeto
+  owner         User          @relation(fields: [ownerId], references: [id])
+  ownerId       String
+
+  // Relação com os membros da equipe
+  teamMembers   TeamMember[]
+
+  @@map("projects")
+}
+
+// Model para os Membros da Equipe
+model TeamMember {
+  id        String   @id @default(cuid())
+  name      String
+  role      String
+  photo     String?
+  
+  // Relação com o projeto ao qual pertence
+  project   Project  @relation(fields: [projectId], references: [id])
+  projectId String
+
+  @@map("team_members")
 }
