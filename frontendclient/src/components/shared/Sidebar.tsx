@@ -13,6 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
+import { useAuth } from '@/contexts/auth.context'; // 1. Importar o hook de autenticação
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -20,6 +21,7 @@ interface SidebarProps {
 
 export function Sidebar({ onNavigate }: SidebarProps) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const { user, logout } = useAuth(); // 2. Usar o hook para pegar o usuário e a função de logout
   const navigate = useNavigate();
 
   const navItems = [
@@ -31,37 +33,32 @@ export function Sidebar({ onNavigate }: SidebarProps) {
     { icon: <Settings className="h-5 w-5" />, label: 'Configurações', path: '/configuracoes' },
   ];
 
-  const handleLogout = async () => {
-    try {
-      navigate('/'); // Redireciona para a página inicial
-      if (onNavigate) onNavigate(); // Fecha o sidebar mobile se estiver aberto
-    } catch (error) {
-      console.error('Erro ao fazer logout:', error);
-    }
+  const handleLogout = () => {
+    logout(); // 3. Chamar a função de logout do contexto
+    if (onNavigate) onNavigate();
   };
 
   return (
     <div className="flex flex-col h-full p-6 w-full">
       {/* Logo */}
-      <Link
-        to="/"
-        className="mb-10"
-        onClick={onNavigate}
-      >
+      <Link to="/" className="mb-10" onClick={onNavigate}>
         <div className="flex items-center justify-center space-x-3">
           <img src="/logo-lumioo-logged.svg" alt="Lumioo logo" className="h-24 w-auto" />
         </div>
       </Link>
 
-      {/* Avatar do Usuário */}
+      {/* --- DADOS DO USUÁRIO AGORA SÃO DINÂMICOS --- */}
       <div className="flex items-center space-x-3 mb-8 p-3 rounded-lg bg-slate-800/50">
         <Avatar className="h-10 w-10 border-2 border-red-500/30">
-          <AvatarImage src="/user1.jpg" alt="Usuário" />
-          <AvatarFallback className="bg-slate-700 text-red-400 font-bold">U</AvatarFallback>
+          {/* A imagem do usuário será implementada no futuro */}
+          <AvatarImage src={undefined} alt={user?.fullName} />
+          <AvatarFallback className="bg-slate-700 text-red-400 font-bold">
+            {user?.fullName?.charAt(0).toUpperCase() || '?'}
+          </AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-medium text-slate-100">Pesquisador</p>
-          <p className="text-xs text-slate-400">@pesquisador_upe</p>
+          <p className="font-medium text-slate-100">{user?.fullName || 'Usuário'}</p>
+          <p className="text-xs text-slate-400">@{user?.username || 'username'}</p>
         </div>
       </div>
 
@@ -84,7 +81,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           </motion.div>
         ))}
 
-        {/* Botão de Sair com tratamento especial */}
+        {/* Botão de Sair */}
         <motion.div
           whileHover={{ x: 5 }}
           transition={{ duration: 0.2 }}
@@ -117,9 +114,8 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
            <AlertDialogCancel className="bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-200">
-  Cancelar
-</AlertDialogCancel>
-
+             Cancelar
+           </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleLogout}
               className="bg-red-600 hover:bg-red-700"
