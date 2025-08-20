@@ -37,22 +37,22 @@ interface ProfilePostCardProps {
   onSave: (postId: string) => void;
   onDelete: (postId: string) => void;
 }
-
-export function ProfilePostCard({ post, isOwner, onLike, onSave, onDelete }: ProfilePostCardProps) {
+// tinha o onLike aqui nos parametros
+export function ProfilePostCard({ post, isOwner, onSave, onDelete }: ProfilePostCardProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
-  const [isLiked, setIsLiked] = useState(post.isLiked);
+  // const [isLiked, setIsLiked] = useState(post.isLiked);
   const [isSaved, setIsSaved] = useState(post.isSaved);
-  const [likesCount, setLikesCount] = useState(post.likes);
+  // const [likesCount, setLikesCount] = useState(post.likes);
   const [isHovered, setIsHovered] = useState(false);
 
-  const handleLike = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsLiked(!isLiked);
-    setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
-    onLike(post.id);
-  };
+  // const handleLike = (e: React.MouseEvent) => {
+  //   e.stopPropagation();
+  //   setIsLiked(!isLiked);
+  //   setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
+  //   onLike(post.id);
+  // };
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -109,7 +109,7 @@ export function ProfilePostCard({ post, isOwner, onLike, onSave, onDelete }: Pro
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-6 text-white">
             <div className="flex items-center gap-1 font-semibold">
               <Heart className="h-6 w-6 fill-current" />
-              <span>{likesCount}</span>
+              <span>100</span>
             </div>
             <div className="flex items-center gap-1 font-semibold">
               <MessageCircle className="h-6 w-6" />
