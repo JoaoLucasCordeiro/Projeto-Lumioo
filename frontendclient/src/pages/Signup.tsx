@@ -1,14 +1,90 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Link } from "react-router-dom";
-import { User, Mail, GraduationCap, Calendar } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { User, Mail, GraduationCap, Calendar, Lock, AlertCircle } from "lucide-react";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function SignupPage() {
+    const navigate = useNavigate(); 
+    const [formData, setFormData] = useState({
+        fullName: "",
+        academicEmail: "",
+        username: "",
+        password: "",
+        confirmPassword: "",
+        institution: "",
+        academicLevel: "",
+        dateOfBirth: "",
+    });
+
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { id, value } = e.target;
+        setFormData((prevData) => ({
+            ...prevData,
+            [id]: value,
+        }));
+    };
+
+    const handleSelectChange = (value: string) => {
+        setFormData((prevData) => ({
+            ...prevData,
+            academicLevel: value,
+        }));
+    };
+
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setError(null); 
+
+        if (formData.password !== formData.confirmPassword) {
+            setError("As senhas não coincidem.");
+            return;
+        }
+
+        setLoading(true); 
+
+        try {
+            const response = await fetch(`${API_URL}/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    fullName: formData.fullName,
+                    academicEmail: formData.academicEmail,
+                    username: formData.username,
+                    password: formData.password,
+                    institution: formData.institution,
+                    academicLevel: formData.academicLevel,
+                    dateOfBirth: formData.dateOfBirth ? new Date(formData.dateOfBirth).toISOString() : null,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Ocorreu um erro ao criar a conta.');
+            }
+
+            alert('Conta criada com sucesso! Você será redirecionado para o login.'); 
+            navigate('/login');
+
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false); 
+        }
+    };
+
     return (
         <section className="relative w-full min-h-screen bg-slate-900 overflow-hidden flex items-center justify-center p-4">
-            {/* Efeitos de fundo consistentes */}
             <div className="absolute inset-0 z-0">
                 <div className="absolute inset-0 bg-gradient-to-b from-slate-900 via-black to-slate-900"></div>
                 <div className="absolute top-1/4 left-1/4 w-48 h-48 md:w-64 md:h-64 bg-red-500/10 rounded-full blur-3xl"></div>
@@ -39,7 +115,6 @@ export default function SignupPage() {
                 ))}
             </div>
 
-            {/* Card de Cadastro */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -60,11 +135,9 @@ export default function SignupPage() {
                     <p className="text-slate-400">Junte-se à comunidade de pesquisa acadêmica</p>
                 </div>
 
-                {/* Formulário */}
-                <form className="space-y-5">
-                    {/* Campo Nome Completo */}
+                <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label htmlFor="fullname" className="block text-sm font-medium text-slate-300 mb-2">
+                        <label htmlFor="fullName" className="block text-sm font-medium text-slate-300 mb-2">
                             Nome Completo
                         </label>
                         <div className="relative">
@@ -72,18 +145,19 @@ export default function SignupPage() {
                                 <User className="h-5 w-5 text-slate-500" />
                             </div>
                             <Input
-                                id="fullname"
+                                id="fullName"
                                 type="text"
                                 placeholder="Seu nome completo"
                                 className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500"
+                                value={formData.fullName}
+                                onChange={handleChange}
                                 required
                             />
                         </div>
                     </div>
 
-                    {/* Campo Email */}
                     <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
+                        <label htmlFor="academicEmail" className="block text-sm font-medium text-slate-300 mb-2">
                             Email Acadêmico
                         </label>
                         <div className="relative">
@@ -91,16 +165,17 @@ export default function SignupPage() {
                                 <Mail className="h-5 w-5 text-slate-500" />
                             </div>
                             <Input
-                                id="email"
+                                id="academicEmail"
                                 type="email"
                                 placeholder="seu@email.academico"
                                 className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500"
+                                value={formData.academicEmail}
+                                onChange={handleChange}
                                 required
                             />
                         </div>
                     </div>
 
-                    {/* Campo Nome de Usuário */}
                     <div>
                         <label htmlFor="username" className="block text-sm font-medium text-slate-300 mb-2">
                             Nome de Usuário
@@ -114,12 +189,53 @@ export default function SignupPage() {
                                 type="text"
                                 placeholder="nome.de.usuario"
                                 className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500"
+                                value={formData.username}
+                                onChange={handleChange}
                                 required
                             />
                         </div>
                     </div>
 
-                    {/* Campo Faculdade/Instituição */}
+                    <div>
+                        <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
+                            Senha
+                        </label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Lock className="h-5 w-5 text-slate-500" />
+                            </div>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="••••••••"
+                                className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500"
+                                value={formData.password}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-2">
+                            Confirmar Senha
+                        </label>
+                        <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Lock className="h-5 w-5 text-slate-500" />
+                            </div>
+                            <Input
+                                id="confirmPassword"
+                                type="password"
+                                placeholder="••••••••"
+                                className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500"
+                                value={formData.confirmPassword}
+                                onChange={handleChange}
+                                required
+                            />
+                        </div>
+                    </div>
+
                     <div>
                         <label htmlFor="institution" className="block text-sm font-medium text-slate-300 mb-2">
                             Faculdade/Instituição
@@ -133,12 +249,13 @@ export default function SignupPage() {
                                 type="text"
                                 placeholder="Sua instituição de ensino"
                                 className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500"
+                                value={formData.institution}
+                                onChange={handleChange}
                                 required
                             />
                         </div>
                     </div>
 
-                    {/* Campo Nível Acadêmico */}
                     <div className="space-y-2">
                         <label htmlFor="academicLevel" className="block text-sm font-medium text-slate-300">
                             Nível Acadêmico
@@ -147,7 +264,7 @@ export default function SignupPage() {
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <GraduationCap className="h-5 w-5 text-slate-500" />
                             </div>
-                            <Select required>
+                            <Select onValueChange={handleSelectChange} required>
                                 <SelectTrigger
                                     className="w-full bg-slate-800 border-slate-700 text-slate-200 pl-10 h-10 focus:ring-red-500 focus:border-red-500"
                                 >
@@ -158,28 +275,16 @@ export default function SignupPage() {
                                     position="popper"
                                     sideOffset={4}
                                 >
-                                    <SelectItem
-                                        value="undergrad"
-                                        className="hover:bg-slate-700 focus:bg-slate-700"
-                                    >
+                                    <SelectItem value="UNDERGRADUATE" className="hover:bg-slate-700 focus:bg-slate-700">
                                         Estudante de Graduação
                                     </SelectItem>
-                                    <SelectItem
-                                        value="masters"
-                                        className="hover:bg-slate-700 focus:bg-slate-700"
-                                    >
+                                    <SelectItem value="MASTER" className="hover:bg-slate-700 focus:bg-slate-700">
                                         Estudante de Mestrado
                                     </SelectItem>
-                                    <SelectItem
-                                        value="phd"
-                                        className="hover:bg-slate-700 focus:bg-slate-700"
-                                    >
+                                    <SelectItem value="PHD" className="hover:bg-slate-700 focus:bg-slate-700">
                                         Estudante de Doutorado
                                     </SelectItem>
-                                    <SelectItem
-                                        value="professor"
-                                        className="hover:bg-slate-700 focus:bg-slate-700"
-                                    >
+                                    <SelectItem value="PROFESSOR" className="hover:bg-slate-700 focus:bg-slate-700">
                                         Professor/Pesquisador
                                     </SelectItem>
                                 </SelectContent>
@@ -187,9 +292,8 @@ export default function SignupPage() {
                         </div>
                     </div>
 
-                    {/* Campo Data de Nascimento */}
                     <div>
-                        <label htmlFor="birthdate" className="block text-sm font-medium text-slate-300 mb-2">
+                        <label htmlFor="dateOfBirth" className="block text-sm font-medium text-slate-300 mb-2">
                             Data de Nascimento
                         </label>
                         <div className="relative">
@@ -197,16 +301,25 @@ export default function SignupPage() {
                                 <Calendar className="h-5 w-5 text-slate-500" />
                             </div>
                             <Input
-                                id="birthdate"
+                                id="dateOfBirth"
                                 type="date"
                                 className="bg-slate-800 border-slate-700 text-slate-200 pl-10 focus:ring-red-500 focus:border-red-500 [&::-webkit-calendar-picker-indicator]:invert-[0.7]"
+                                value={formData.dateOfBirth}
+                                onChange={handleChange}
                                 required
                             />
                         </div>
                     </div>
 
+                    {error && (
+                        <div className="flex items-center p-3 text-sm text-red-400 bg-red-900/20 border border-red-800/50 rounded-lg">
+                            <AlertCircle className="flex-shrink-0 inline w-5 h-5 mr-3" />
+                            <div>{error}</div>
+                        </div>
+                    )}
+
                     {/* Termos e Condições */}
-                    <div className="flex items-start mt-6">
+                    <div className="flex items-start pt-2">
                         <div className="flex items-center h-5">
                             <input
                                 id="terms"
@@ -230,18 +343,17 @@ export default function SignupPage() {
                         </div>
                     </div>
 
-                    {/* Botão de Cadastro */}
                     <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }} className="pt-4">
                         <Button
                             type="submit"
-                            className="w-full bg-gradient-to-r from-[#ff3131] to-red-600 hover:from-[#ff3131]/90 hover:to-red-600/90 text-white font-medium py-6 text-lg transition-all"
+                            className="w-full bg-gradient-to-r from-[#ff3131] to-red-600 hover:from-[#ff3131]/90 hover:to-red-600/90 text-white font-medium py-6 text-lg transition-all disabled:opacity-50"
+                            disabled={loading}
                         >
-                            Criar Conta
+                            {loading ? 'Criando conta...' : 'Criar Conta'}
                         </Button>
                     </motion.div>
                 </form>
 
-                {/* Link para Login */}
                 <div className="text-center mt-6">
                     <p className="text-sm text-slate-400">
                         Já tem uma conta?{" "}
