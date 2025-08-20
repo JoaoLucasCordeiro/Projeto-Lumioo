@@ -1,6 +1,6 @@
-import { FeedHeader } from "@/components/shared/FeedHeader";
-import { FeedLayout } from "@/components/shared/FeedLayout";
-import { PostsList } from "@/components/shared/PostsList";
+import { FeedHeader } from "@/components/shared/feed/FeedHeader";
+import { FeedLayout } from "@/components/shared/feed/FeedLayout";
+import { PostsList } from "@/components/shared/feed/PostsList";
 import { useAuth } from "@/contexts/auth.context";
 import type { Post } from "@/types/feed";
 import { useState, useEffect, useRef, useCallback } from "react";
