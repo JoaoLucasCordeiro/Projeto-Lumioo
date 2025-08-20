@@ -6,7 +6,7 @@ import { optionalAuthenticateToken } from '../middlewares/optionalAuth.middlewar
 const router = Router();
 
 // Rotas públicas
-router.get('/posts', getAllPosts);
+router.get('/posts', optionalAuthenticateToken, getAllPosts);
 router.get('/posts/:id', getPostById);
 
 // Rotas protegidas
@@ -14,8 +14,6 @@ router.post('/posts', authenticateToken, createPost);
 router.put('/posts/:id', authenticateToken, updatePost);
 router.delete('/posts/:id', authenticateToken, deletePost);
 router.get('/feed', authenticateToken, getFeedPosts);
-
-// ROTA PARA DETALHES DO POST (autenticação opcional)
 router.get('/posts/:id', optionalAuthenticateToken, getPostById);
 
 export default router;
