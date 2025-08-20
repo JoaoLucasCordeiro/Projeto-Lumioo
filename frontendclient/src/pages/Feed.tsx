@@ -1,75 +1,105 @@
 import { FeedHeader } from "@/components/shared/FeedHeader";
 import { FeedLayout } from "@/components/shared/FeedLayout";
 import { PostsList } from "@/components/shared/PostsList";
+import { useAuth } from "@/contexts/auth.context";
 import type { Post } from "@/types/feed";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
-
-// Mock data - em uma aplicação real isso viria de uma API ou hook
-const mockPosts: Post[] = [
-  {
-    id: '1',
-    username: 'pesquisador_upe',
-    userImage: '/user1.jpg',
-    image: '/post1.jpg',
-    caption: 'Novo artigo publicado sobre inteligência artificial aplicada à pesquisa científica! #Lumioo #Pesquisa',
-    likes: 1243,
-    comments: 42,
-    timePosted: '2h atrás',
-    isLiked: false,
-    isSaved: true
-  },
-  {
-    id: '2',
-    username: 'cientista_br',
-    userImage: '/user2.jpg',
-    image: '/post2.jpg',
-    caption: 'Compartilhando minha última pesquisa sobre mudanças climáticas na região nordeste. #Ciência #Sustentabilidade',
-    likes: 856,
-    comments: 23,
-    timePosted: '5h atrás',
-    isLiked: true,
-    isSaved: false
-  },
-  {
-    id: '3',
-    username: 'lab_fisica',
-    userImage: '/user3.jpg',
-    image: '/post3.jpg',
-    caption: 'Resultados promissores em nosso novo experimento com supercondutores! #Física #Inovação',
-    likes: 2105,
-    comments: 87,
-    timePosted: '1d atrás',
-    isLiked: false,
-    isSaved: true
-  }
-];
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function FeedPage() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const { token } = useAuth();
 
-  const handleNewPost = () => {
-    // Lógica para criar novo post
-    console.log('Criar novo post');
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const observer = useRef<IntersectionObserver | null>(null);
+
+  const fetchPosts = useCallback(async (currentCursor?: string, isRefresh = false) => {
+    if (isLoading || (!hasMore && !isRefresh)) return;
+    
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let url = `${API_URL}/feed`;
+      if (currentCursor && !isRefresh) {
+        url += `?cursor=${currentCursor}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (!response.ok) throw new Error('Falha ao buscar os posts.');
+
+      const data = await response.json();
+      
+      setPosts(prevPosts => isRefresh ? data.posts : [...prevPosts, ...data.posts]);
+      setCursor(data.nextCursor);
+      setHasMore(data.nextCursor !== null);
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  const handlePostUpdate = () => {
+    fetchPosts(undefined, true);
   };
+
+  const lastPostElementRef = useCallback((node: HTMLDivElement) => {
+    if (isLoading) return;
+    if (observer.current) observer.current.disconnect();
+    
+    observer.current = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && hasMore) {
+        fetchPosts(cursor);
+      }
+    });
+    
+    if (node) observer.current.observe(node);
+  }, [isLoading, hasMore, cursor, fetchPosts]);
+
+  useEffect(() => {
+    if (token) {
+      handlePostUpdate();
+    }
+  }, [token]);
+
+
+  const handleNewPost = () => console.log('Criar novo post');
 
   return (
     <FeedLayout 
       mobileSidebarOpen={mobileSidebarOpen} 
       setMobileSidebarOpen={setMobileSidebarOpen}
     >
-      {/* Cabeçalho do Feed Mobile */}
       <div className="md:hidden">
         <FeedHeader variant="mobile" onNewPost={handleNewPost} />
       </div>
-
-      {/* Cabeçalho do Feed Desktop */}
       <div className="hidden md:block">
         <FeedHeader variant="desktop" onNewPost={handleNewPost} />
       </div>
 
-      {/* Lista de Posts */}
-      <PostsList posts={mockPosts} />
+      <PostsList posts={posts} lastPostRef={lastPostElementRef} onUpdate={handlePostUpdate} />
+
+      {isLoading && posts.length === 0 && <p className="text-center text-slate-400 mt-8">Carregando feed...</p>}
+      {isLoading && posts.length > 0 && <p className="text-center text-slate-400 mt-8">Carregando mais posts...</p>}
+      {!hasMore && posts.length > 0 && <p className="text-center text-slate-500 mt-8">Você chegou ao fim! ✨</p>}
+      {error && <p className="text-center text-red-500 mt-8">Erro: {error}</p>}
+      {!isLoading && posts.length === 0 && !error && (
+        <div className="text-center text-slate-400 mt-16">
+          <h2 className="text-2xl font-bold">Bem-vindo ao seu feed!</h2>
+          <p className="mt-2">Parece um pouco vazio. Crie seu primeiro post ou siga outros pesquisadores.</p>
+        </div>
+      )}
     </FeedLayout>
   );
 }
