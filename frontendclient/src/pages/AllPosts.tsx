@@ -1,4 +1,3 @@
-import { Post } from "../components/shared/Post";
 import { Sidebar } from "../components/shared/Sidebar";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -6,6 +5,7 @@ import { Search, Menu } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "../components/ui/button";
 import { useState } from "react";
+import { Post } from "@/components/shared/Post";
 
 export function AllPosts() {
 
