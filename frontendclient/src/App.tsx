@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/Login';
 import SignupPage from './pages/Signup';
@@ -17,25 +17,23 @@ import { NewProjectPage } from './pages/NewProject';
 
 const App = () => {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/cadastro" element={<SignupPage />} />
-        <Route path="/perfil" element={<ProfilePage />} />
-        <Route path="/feed" element={<FeedPage />} />
-        <Route path="/configuracoes" element={<SettingsPage />} />
-        <Route path="/trabalhos" element={<WorksPage />} />
-        <Route path="/trabalhos/:id" element={<WorkDetails />} />
-        <Route path="/submeter-trabalho" element={<SubmitWorkPage />} />
-        <Route path="/posts" element={<AllPosts />} />
-        <Route path="/novo-projeto" element={<NewProjectPage />} />
-        <Route path="/projetos" element={<ProjectsPage />} />
-        <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
-        <Route path="/new-post" element={<NewPostPage />} />
-        <Route path="/post/:id" element={<PostDetails />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/cadastro" element={<SignupPage />} />
+      <Route path="/perfil" element={<ProfilePage />} />
+      <Route path="/feed" element={<FeedPage />} />
+      <Route path="/configuracoes" element={<SettingsPage />} />
+      <Route path="/trabalhos" element={<WorksPage />} />
+      <Route path="/trabalhos/:id" element={<WorkDetails />} />
+      <Route path="/submeter-trabalho" element={<SubmitWorkPage />} />
+      <Route path="/posts" element={<AllPosts />} />
+      <Route path="/novo-projeto" element={<NewProjectPage />} />
+      <Route path="/projetos" element={<ProjectsPage />} />
+      <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
+      <Route path="/new-post" element={<NewPostPage />} />
+      <Route path="/post/:id" element={<PostDetails />} />
+    </Routes>
   );
 }
 
