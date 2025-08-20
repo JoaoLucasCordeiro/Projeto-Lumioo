@@ -167,10 +167,8 @@ export const deleteProject = async (req: AuthenticatedRequest, res: Response) =>
     }
 
     await prisma.$transaction([
-      // 1. Primeiro, deletamos todos os membros da equipe associados a este projeto
       prisma.teamMember.deleteMany({ where: { projectId: id } }),
-      
-      // 2. Depois, deletamos o projeto em si
+    
       prisma.project.delete({ where: { id } }),
     ]);
 
