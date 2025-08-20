@@ -29,13 +29,13 @@ const App = () => {
       <Route path="/trabalhos/:id" element={<WorkDetails />} />
       <Route path="/submeter-trabalho" element={<SubmitWorkPage />} />
       <Route path="/posts" element={<AllPosts />} />
-        <Route path="/post/:id" element={<PostDetails />} />
-       <Route path="/post/:id/edit" element={<EditPostPage />} /> 
+      <Route path="/post/:id" element={<PostDetails />} />
+      <Route path="/post/:id/edit" element={<EditPostPage />} />
       <Route path="/novo-projeto" element={<NewProjectPage />} />
       <Route path="/projetos" element={<ProjectsPage />} />
       <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
       <Route path="/novo-post" element={<NewPostPage />} />
-    
+
     </Routes>
   );
 }
