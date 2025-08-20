@@ -1,8 +1,9 @@
-// src/components/post-details/PostHeader.tsx
+// src/components/shared/post-details/PostHeader.tsx
 import { Link } from 'react-router-dom';
 import { Clock, Bookmark, X } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useTimeAgo } from '@/hooks/useTimeAgo'; 
 import type { PostDetailsData } from '@/types/post';
 
 interface PostHeaderProps {
@@ -12,6 +13,8 @@ interface PostHeaderProps {
 }
 
 export function PostHeader({ post, onSavePost, onClose }: PostHeaderProps) {
+  const timeAgo = useTimeAgo(post.timePosted); 
+
   return (
     <div className="flex items-center justify-between p-4 border-b border-slate-700 bg-slate-800/50 flex-shrink-0">
       <div className="flex items-center space-x-3">
@@ -27,7 +30,8 @@ export function PostHeader({ post, onSavePost, onClose }: PostHeaderProps) {
           </Link>
           <div className="flex items-center text-xs text-slate-400">
             <Clock className="h-3 w-3 mr-1 text-red-400" />
-            <span>{post.timePosted}</span>
+            {/* 3. Exibir a data formatada */}
+            <span>{timeAgo}</span>
           </div>
         </div>
       </div>

@@ -206,7 +206,7 @@ export function PostDetails() {
                 currentUserId={user?.id}
                 onStartEdit={handleStartEdit}
                 onStartDelete={setDeletingComment}
-                onLikeComment={handleLikeComment} // <-- Passa a nova função
+                onLikeComment={handleLikeComment} 
               />
             </div>
             <CommentForm 

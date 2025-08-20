@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/auth.context';
+import { useTimeAgo } from '@/hooks/useTimeAgo'; 
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -83,6 +84,7 @@ export function Post({
 }: PostProps) {
   const { user, token } = useAuth();
   const navigate = useNavigate();
+  const timeAgo = useTimeAgo(timePosted); // 2. Usar o hook para formatar a data
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -166,7 +168,10 @@ export function Post({
             </Avatar>
             <div>
               <Link to={`/perfil/${username}`} className="font-bold text-slate-100 hover:text-red-400 transition-colors">{username}</Link>
-              <div className="flex items-center text-sm text-slate-400 mt-1"><Clock className="h-4 w-4 mr-1 text-red-400" /><span>{timePosted}</span></div>
+              <div className="flex items-center text-sm text-slate-400 mt-1">
+                <Clock className="h-4 w-4 mr-1 text-red-400" />
+                <span>{timeAgo}</span>
+              </div>
             </div>
           </div>
           <DropdownMenu>

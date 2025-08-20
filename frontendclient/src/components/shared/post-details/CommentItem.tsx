@@ -1,10 +1,10 @@
-// src/components/shared/post-details/CommentItem.tsx
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Heart, MoreHorizontal, Edit, Trash2, Flag } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useTimeAgo } from '@/hooks/useTimeAgo'; 
 import type { Comment } from '@/types/post';
 
 interface CommentItemProps {
@@ -12,10 +12,12 @@ interface CommentItemProps {
   isOwner: boolean;
   onStartEdit: (comment: Comment) => void;
   onStartDelete: (comment: Comment) => void;
-  onLikeComment: (commentId: string) => void; // <-- Adicionado
+  onLikeComment: (commentId: string) => void;
 }
 
 export function CommentItem({ comment, isOwner, onStartEdit, onStartDelete, onLikeComment }: CommentItemProps) {
+  const timeAgo = useTimeAgo(comment.timePosted); 
+
   return (
     <motion.div 
       initial={{ opacity: 0, x: 10 }} 
@@ -35,7 +37,8 @@ export function CommentItem({ comment, isOwner, onStartEdit, onStartDelete, onLi
           <Link to={`/perfil/${comment.username}`} className="font-bold text-slate-100 hover:text-red-400 mr-2 truncate">
             {comment.username}
           </Link>
-          <span className="text-xs text-slate-500 flex-shrink-0">{comment.timePosted}</span>
+          {/* 3. Exibir a data formatada */}
+          <span className="text-xs text-slate-500 flex-shrink-0">{timeAgo}</span>
         </div>
         <p className="text-slate-300 mt-1 break-words">{comment.text}</p>
         <div className="flex items-center mt-2 space-x-4">
@@ -43,12 +46,11 @@ export function CommentItem({ comment, isOwner, onStartEdit, onStartDelete, onLi
             variant="ghost" 
             size="sm" 
             className={`text-xs ${comment.isLiked ? 'text-red-500' : 'text-slate-400'} hover:bg-transparent h-6`}
-            onClick={() => onLikeComment(comment.id)} // <-- AÇÃO DE CURTIR CONECTADA
+            onClick={() => onLikeComment(comment.id)}
           >
             <Heart className={`h-3 w-3 mr-1 ${comment.isLiked ? 'fill-current' : ''}`} />
             <span>{comment.likes.toLocaleString()}</span>
           </Button>
-         
         </div>
       </div>
       <DropdownMenu>
@@ -61,15 +63,15 @@ export function CommentItem({ comment, isOwner, onStartEdit, onStartDelete, onLi
           {isOwner ? (
             <>
               <DropdownMenuItem onClick={() => onStartEdit(comment)} className="focus:bg-slate-700 focus:text-red-400 cursor-pointer">
-                <Edit className="h-4 w-4 mr-2" /> Editar
+                <Edit className="h-4 w-4 mr-2 text-red-400" /> Editar
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onStartDelete(comment)} className="focus:bg-slate-700 focus:text-red-400 cursor-pointer">
-                <Trash2 className="h-4 w-4 mr-2" /> Deletar
+                <Trash2 className="h-4 w-4 mr-2 text-red-400" /> Deletar
               </DropdownMenuItem>
             </>
           ) : (
             <DropdownMenuItem className="focus:bg-slate-700 focus:text-red-400 cursor-pointer">
-              <Flag className="h-4 w-4 mr-2" /> Denunciar
+              <Flag className="h-4 w-4 mr-2 text-red-400" /> Denunciar
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
