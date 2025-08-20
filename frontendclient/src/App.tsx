@@ -2,7 +2,6 @@ import { Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/Login';
 import SignupPage from './pages/Signup';
-import { PostDetails } from './components/shared/PostDetails';
 import { AllPosts } from './pages/AllPosts';
 import { FeedPage } from './pages/Feed';
 import { ProjectsPage } from './pages/Projects';
@@ -14,6 +13,8 @@ import { WorkDetails } from './pages/WorksDetails';
 import { NewPostPage } from './pages/NewPost';
 import { SubmitWorkPage } from './pages/SubmitWork';
 import { NewProjectPage } from './pages/NewProject';
+import { PostDetails } from './pages/PostDetails';
+import { EditPostPage } from './pages/EditPosts';
 
 const App = () => {
   return (
@@ -33,6 +34,7 @@ const App = () => {
       <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
       <Route path="/new-post" element={<NewPostPage />} />
       <Route path="/post/:id" element={<PostDetails />} />
+       <Route path="/post/:id/edit" element={<EditPostPage />} /> 
     </Routes>
   );
 }
