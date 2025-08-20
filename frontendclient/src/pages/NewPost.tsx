@@ -7,14 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { FeedLayout } from "@/components/shared/FeedLayout";
+import { FeedLayout } from "@/components/shared/feed/FeedLayout";
 import { useAuth } from "@/contexts/auth.context";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
 export function NewPostPage() {
   const navigate = useNavigate();
-  const { token } = useAuth(); // Pega o token do usuário logado
+  const { token } = useAuth(); 
 
   const [caption, setCaption] = useState("");
   const [image, setImage] = useState<string | null>(null);
@@ -22,7 +22,7 @@ export function NewPostPage() {
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [newHashtag, setNewHashtag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Estado para erros
+  const [error, setError] = useState<string | null>(null); 
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -81,7 +81,6 @@ export function NewPostPage() {
             throw new Error(data.error || "Não foi possível criar o post.");
         }
         
-        // Navegar de volta para o feed após o sucesso
         navigate('/feed');
 
     } catch (err: any) {
