@@ -117,11 +117,10 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(404).json({ error: 'Post not found.' });
     }
 
-    // Formata o post e seus comentários para o front-end
     const formattedPost = {
       id: post.id,
       username: post.author.username,
-      authorId: post.authorId, // Adiciona o ID do autor para verificação de posse
+      authorId: post.authorId,
       userImage: '/default-user.png',
       image: post.image,
       caption: post.caption,
@@ -132,6 +131,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
       comments: post.comments.map(comment => ({
         id: comment.id,
         username: comment.author.username,
+        authorId: comment.authorId, 
         userImage: '/default-user.png',
         text: comment.text,
         timePosted: comment.createdAt.toISOString(),
