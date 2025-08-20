@@ -8,27 +8,24 @@ export const createUser = async (req: Request, res: Response) => {
   try {
     const { fullName, academicEmail, username, password, institution, academicLevel, dateOfBirth } = req.body;
 
-    // Basic validation
     if (!fullName || !academicEmail || !username || !password || !institution || !academicLevel || !dateOfBirth) {
       return res.status(400).json({ error: 'All fields are required.' });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10); // 10 is the salt rounds
+    const hashedPassword = await bcrypt.hash(password, 10); 
 
     const newUser = await prisma.user.create({
       data: {
         fullName,
         academicEmail,
         username,
-        password: hashedPassword, // <-- Save the hashed password
+        password: hashedPassword, 
         institution,
         academicLevel,
         dateOfBirth: new Date(dateOfBirth),
       },
     });
     
-    // Do not return the password in the response
     const { password: _, ...userWithoutPassword } = newUser;
 
     res.status(201).json(userWithoutPassword);
