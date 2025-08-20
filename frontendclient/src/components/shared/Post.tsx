@@ -1,9 +1,10 @@
+import { useState } from 'react';
 import { Heart, MessageCircle, Bookmark, MoreHorizontal, Clock, Flag, Edit, Trash2 } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Badge } from '../ui/badge';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,13 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { useAuth } from '@/contexts/auth.context';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface PostProps {
   id: string;
   username: string;
+  authorId: string; 
   userImage: string;
   image: string;
   caption: string;
@@ -34,11 +38,13 @@ interface PostProps {
   timePosted: string;
   isLiked: boolean;
   isSaved: boolean;
+  onUpdate: () => void; 
 }
 
 export function Post({
   id,
   username,
+  authorId,
   userImage,
   image,
   caption,
@@ -46,51 +52,47 @@ export function Post({
   comments,
   timePosted,
   isLiked,
-  isSaved
+  isSaved,
+  onUpdate
 }: PostProps) {
+  const { user, token } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
   
-  // Simulação: verificar se o usuário atual é o dono do post
-  // Em uma aplicação real, isso viria de um contexto de autenticação
-  const currentUser = "user_example"; // Este seria o usuário logado
-  const isOwner = currentUser === username;
+  const isOwner = user?.id === authorId;
 
-  const handleDeletePost = () => {
-    // Lógica para deletar o post
-    console.log("Deletar post:", id);
-    setIsMenuOpen(false);
+  const handleLike = async () => {
+    if (!token) return;
+    try {
+      await fetch(`${API_URL}/posts/${id}/like`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      onUpdate();
+    } catch (error) {
+      console.error("Failed to like post:", error);
+    }
   };
 
-  const handleEditPost = () => {
-    // Lógica para editar o post
-    console.log("Editar post:", id);
-    setIsMenuOpen(false);
+  const handleSave = async () => {
+    if (!token) return;
+    try {
+      await fetch(`${API_URL}/posts/${id}/save`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      onUpdate();
+    } catch (error) {
+      console.error("Failed to save post:", error);
+    }
   };
 
-  const handleSavePost = () => {
-    // Lógica para salvar/remover dos salvos
-    console.log("Salvar post:", id);
-    setIsMenuOpen(false);
-  };
-
-  const handleReportPost = () => {
-    setIsMenuOpen(false);
-    setIsReportDialogOpen(true);
-  };
-
-  const handleSubmitReport = () => {
-    // Lógica para enviar a denúncia
-    console.log("Denunciar post:", id, "Motivo:", reportReason);
-    setIsReportDialogOpen(false);
-    setReportReason("");
-  };
-
-  const handleCancelReport = () => {
-    setIsReportDialogOpen(false);
-    setReportReason("");
-  };
+  const handleDeletePost = () => console.log("Deletar post:", id);
+  const handleEditPost = () => console.log("Editar post:", id);
+  const handleReportPost = () => setIsReportDialogOpen(true);
+  const handleSubmitReport = () => console.log("Denunciar post:", id, "Motivo:", reportReason);
+  const handleCancelReport = () => setIsReportDialogOpen(false);
 
   return (
     <>
@@ -100,14 +102,12 @@ export function Post({
         transition={{ duration: 0.5 }}
         className="relative bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl overflow-hidden shadow-lg mb-8 hover:border-red-500/30 transition-all"
       >
-        {/* Header with gradient badge */}
         <div className="absolute top-4 left-4 z-10">
           <Badge variant="outline" className="bg-red-900/20 border-red-700/50 text-red-400">
             Novo Post
           </Badge>
         </div>
 
-        {/* Post header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12 border-2 border-red-500/30">
@@ -117,10 +117,7 @@ export function Post({
               </AvatarFallback>
             </Avatar>
             <div>
-              <Link 
-                to={`/perfil/${username}`} 
-                className="font-bold text-slate-100 hover:text-red-400 transition-colors"
-              >
+              <Link to={`/perfil/${username}`} className="font-bold text-slate-100 hover:text-red-400 transition-colors">
                 {username}
               </Link>
               <div className="flex items-center text-sm text-slate-400 mt-1">
@@ -130,62 +127,34 @@ export function Post({
             </div>
           </div>
           
-          {/* Menu de opções */}
           <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-slate-400 hover:text-red-400 hover:bg-red-900/10"
-              >
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400 hover:bg-red-900/10">
                 <MoreHorizontal className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="end" 
-              className="bg-slate-800 border-slate-700 text-slate-200 w-48"
-            >
+            <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700 text-slate-200 w-48">
               {isOwner ? (
                 <>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleDeletePost}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Deletar</span>
+                  <DropdownMenuItem onClick={handleDeletePost} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
+                    <Trash2 className="h-4 w-4 mr-2 text-red-400" /><span>Deletar</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleEditPost}
-                  >
-                    <Edit className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Editar</span>
+                  <DropdownMenuItem onClick={handleEditPost} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
+                    <Edit className="h-4 w-4 mr-2 text-red-400" /><span>Editar</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleSavePost}
-                  >
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
+                  <DropdownMenuItem onClick={handleSave} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
+                    <Bookmark className="h-4 w-4 mr-2 text-red-400" /><span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
                   </DropdownMenuItem>
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleSavePost}
-                  >
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
+                  <DropdownMenuItem onClick={handleSave} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
+                    <Bookmark className="h-4 w-4 mr-2 text-red-400" /><span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleReportPost}
-                  >
-                    <Flag className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Denunciar</span>
+                  <DropdownMenuItem onClick={handleReportPost} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
+                    <Flag className="h-4 w-4 mr-2 text-red-400" /><span>Denunciar</span>
                   </DropdownMenuItem>
                 </>
               )}
@@ -193,8 +162,6 @@ export function Post({
           </DropdownMenu>
         </div>
 
-        {/* Resto do código do post permanece igual */}
-        {/* Post image with gradient overlay */}
         <Link to={`/post/${id}`}>
           <div className="relative group overflow-hidden">
             <motion.div 
@@ -202,11 +169,7 @@ export function Post({
               transition={{ duration: 0.3 }}
               className="aspect-square"
             >
-              <img 
-                src={image} 
-                alt={caption} 
-                className="w-full h-full object-cover"
-              />
+              <img src={image} alt={caption} className="w-full h-full object-cover" />
             </motion.div>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
               <p className="text-slate-100 text-lg font-medium">{caption}</p>
@@ -214,71 +177,43 @@ export function Post({
           </div>
         </Link>
 
-        {/* Post actions and info */}
         <div className="p-6">
           <div className="flex justify-between mb-4">
             <div className="flex space-x-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={`${isLiked ? 'text-red-500' : 'text-slate-400'} hover:bg-transparent`}
-              >
-                <motion.div
-                  whileTap={{ scale: 0.9 }}
-                >
+              <Button variant="ghost" size="icon" className={`${isLiked ? 'text-red-500' : 'text-slate-400'} hover:bg-transparent`} onClick={handleLike}>
+                <motion.div whileTap={{ scale: 0.9 }}>
                   <Heart className={`h-6 w-6 ${isLiked ? 'fill-current' : ''}`} />
                 </motion.div>
               </Button>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-slate-400 hover:bg-transparent"
-              >
+              <Button variant="ghost" size="icon" className="text-slate-400 hover:bg-transparent">
                 <MessageCircle className="h-6 w-6" />
               </Button>
             </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={`${isSaved ? 'text-red-400' : 'text-slate-400'} hover:bg-transparent`}
-            >
+            <Button variant="ghost" size="icon" className={`${isSaved ? 'text-red-400' : 'text-slate-400'} hover:bg-transparent`} onClick={handleSave}>
               <Bookmark className={`h-6 w-6 ${isSaved ? 'fill-current' : ''}`} />
             </Button>
           </div>
 
-          {/* Likes count */}
-          <motion.div 
-            whileHover={{ x: 5 }}
-            className="text-sm font-bold text-slate-100 mb-3"
-          >
+          <motion.div whileHover={{ x: 5 }} className="text-sm font-bold text-slate-100 mb-3">
             {likes.toLocaleString()} curtidas
           </motion.div>
 
-          {/* Caption with username */}
           <div className="mb-3">
-            <Link 
-              to={`/perfil/${username}`} 
-              className="font-bold text-slate-100 hover:text-red-400 transition-colors mr-2"
-            >
+            <Link to={`/perfil/${username}`} className="font-bold text-slate-100 hover:text-red-400 transition-colors mr-2">
               {username}
             </Link>
             <span className="text-slate-300">{caption}</span>
           </div>
 
-          {/* Comments link */}
           <motion.div whileHover={{ x: 5 }}>
-            <Link 
-              to={`/post/${id}`} 
-              className="text-sm text-slate-400 hover:text-red-400 transition-colors"
-            >
+            <Link to={`/post/${id}`} className="text-sm text-slate-400 hover:text-red-400 transition-colors">
               Ver todos os {comments.toLocaleString()} comentários
             </Link>
           </motion.div>
         </div>
       </motion.div>
 
-      {/* Modal de Denúncia */}
-      <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+     <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
         <DialogContent className="bg-slate-800 border-slate-700 text-slate-200 sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-red-400">Denunciar Post</DialogTitle>
