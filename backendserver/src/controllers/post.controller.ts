@@ -7,6 +7,53 @@ interface AuthenticatedRequest extends Request {
   user?: { userId: string };
 }
 
+export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(403).json({ error: 'User not authenticated.' });
+  }
+
+  const limit = 5;
+  const { cursor } = req.query;
+
+  try {
+    const postsFromDb = await prisma.post.findMany({
+      take: limit,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor as string } : undefined,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { username: true } },
+        likes: { select: { userId: true } },
+        _count: { select: { comments: true } },
+        savedBy: { where: { userId }, select: { userId: true } },
+      },
+    });
+
+    const formattedPosts = postsFromDb.map(post => ({
+      id: post.id,
+      username: post.author.username,
+      authorId: post.authorId, 
+      userImage: '/default-user.png',
+      image: post.image,
+      caption: post.caption,
+      likes: post.likes.length,
+      comments: post._count.comments,
+      timePosted: post.createdAt.toISOString(),
+      isLiked: post.likes.some(like => like.userId === userId),
+      isSaved: post.savedBy.length > 0,
+    }));
+
+    const nextCursor = postsFromDb.length === limit ? postsFromDb[postsFromDb.length - 1].id : null;
+
+    res.status(200).json({ posts: formattedPosts, nextCursor });
+
+  } catch (error) {
+    console.error("Error fetching feed posts:", error);
+    res.status(500).json({ error: "Could not fetch feed posts." });
+  }
+};
+
 export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user?.userId;
@@ -45,19 +92,58 @@ export const getAllPosts = async (req: Request, res: Response) => {
   }
 };
 
-export const getPostById = async (req: Request, res: Response) => {
+export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId; 
+  const { id } = req.params;
+
   try {
-    const { id } = req.params;
     const post = await prisma.post.findUnique({
       where: { id },
+      include: {
+        author: { select: { username: true } },
+        likes: { select: { userId: true } },
+        savedBy: { where: { userId }, select: { userId: true } },
+        comments: {
+          orderBy: { createdAt: 'asc' },
+          include: {
+            author: { select: { username: true } },
+            likes: { select: { userId: true } },
+          },
+        },
+      },
     });
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found.' });
     }
-    res.status(200).json(post);
+
+    // Formata o post e seus comentários para o front-end
+    const formattedPost = {
+      id: post.id,
+      username: post.author.username,
+      authorId: post.authorId, // Adiciona o ID do autor para verificação de posse
+      userImage: '/default-user.png',
+      image: post.image,
+      caption: post.caption,
+      likes: post.likes.length,
+      timePosted: post.createdAt.toISOString(),
+      isLiked: userId ? post.likes.some(like => like.userId === userId) : false,
+      isSaved: userId ? post.savedBy.length > 0 : false,
+      comments: post.comments.map(comment => ({
+        id: comment.id,
+        username: comment.author.username,
+        userImage: '/default-user.png',
+        text: comment.text,
+        timePosted: comment.createdAt.toISOString(),
+        likes: comment.likes.length,
+        isLiked: userId ? comment.likes.some(like => like.userId === userId) : false,
+      })),
+    };
+
+    res.status(200).json(formattedPost);
   } catch (error) {
-    console.error('Error fetching post:', error);
-    res.status(500).json({ error: 'An error occurred while fetching the post.' });
+    console.error("Error fetching post details:", error);
+    res.status(500).json({ error: "Could not fetch post details." });
   }
 };
 
