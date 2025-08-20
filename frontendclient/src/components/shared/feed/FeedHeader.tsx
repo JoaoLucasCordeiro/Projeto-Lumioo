@@ -13,7 +13,7 @@ export function FeedHeader({ variant = 'desktop', onNewPost }: FeedHeaderProps) 
       onNewPost();
     }
     // Navega para a rota de novo post
-    navigate('/new-post');
+    navigate('/novo-post');
   };
 
   return (
