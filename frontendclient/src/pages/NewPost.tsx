@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Image, MapPin, Smile, Hash } from "lucide-react";
+import { X, Image, MapPin, Smile, Hash, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,15 +8,21 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { FeedLayout } from "@/components/shared/FeedLayout";
+import { useAuth } from "@/contexts/auth.context";
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export function NewPostPage() {
   const navigate = useNavigate();
+  const { token } = useAuth(); // Pega o token do usuário logado
+
   const [caption, setCaption] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [newHashtag, setNewHashtag] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null); // Estado para erros
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,13 +48,47 @@ export function NewPostPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!image) {
+        setError("Por favor, selecione uma imagem para o post.");
+        return;
+    }
+    if (!token) {
+        setError("Você precisa estar logado para criar um post.");
+        return;
+    }
+
     setIsLoading(true);
+    setError(null);
     
-    // Simular upload
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Navegar de volta após postar
-    navigate('/feed');
+    try {
+        const response = await fetch(`${API_URL}/posts`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                caption,
+                image,
+                location: location || null,
+                hashtags,
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Não foi possível criar o post.");
+        }
+        
+        // Navegar de volta para o feed após o sucesso
+        navigate('/feed');
+
+    } catch (err: any) {
+        setError(err.message);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -221,7 +261,12 @@ export function NewPostPage() {
                       onChange={(e) => setNewHashtag(e.target.value.replace(/\s/g, ''))}
                       placeholder="Adicionar hashtag"
                       className="bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500 pl-9"
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddHashtag()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddHashtag();
+                        }
+                      }}
                     />
                     <div className="absolute left-3 top-3">
                       <Hash className="h-4 w-4 text-slate-400" />
@@ -229,15 +274,22 @@ export function NewPostPage() {
                   </div>
                   <Button
                     type="button"
-                    variant="outline"
                     onClick={handleAddHashtag}
                     disabled={!newHashtag.trim()}
-                    className="border-slate-700 text-slate-300 hover:bg-slate-700/50"
+                    className="bg-[#ff3131] hover:bg-red-600 text-white transition-colors"
                   >
                     Adicionar
                   </Button>
                 </div>
               </div>
+              
+              {/* Exibição de Erro */}
+              {error && (
+                <div className="flex items-center p-3 text-sm text-red-400 bg-red-900/20 border border-red-800/50 rounded-lg">
+                  <AlertCircle className="flex-shrink-0 inline w-5 h-5 mr-3" />
+                  <div>{error}</div>
+                </div>
+              )}
 
               {/* Botão de publicar (mobile) */}
               <div className="md:hidden pt-4">
