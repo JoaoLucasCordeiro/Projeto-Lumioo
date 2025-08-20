@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -80,15 +80,49 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const getAllPosts = async (req: Request, res: Response) => {
+export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId;
+  const { search } = req.query;
+
   try {
-    const posts = await prisma.post.findMany({
+    const whereClause: Prisma.PostWhereInput = search ? {
+      OR: [
+        { caption: { contains: search as string, mode: 'insensitive' } },
+        { author: { username: { contains: search as string, mode: 'insensitive' } } },
+        { hashtags: { has: search as string } }
+      ]
+    } : {};
+
+    const postsFromDb = await prisma.post.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
+      include: {
+        author: { select: { username: true } },
+        likes: { select: { userId: true } },
+        _count: { select: { comments: true } },
+        savedBy: { where: { userId }, select: { userId: true } },
+      },
     });
-    res.status(200).json(posts);
+
+    const formattedPosts = postsFromDb.map(post => ({
+      id: post.id,
+      username: post.author.username,
+      authorId: post.authorId,
+      userImage: '/default-user.png',
+      image: post.image,
+      caption: post.caption,
+      likes: post.likes.length,
+      comments: post._count.comments,
+      timePosted: post.createdAt.toISOString(),
+      isLiked: userId ? post.likes.some(like => like.userId === userId) : false,
+      isSaved: userId ? post.savedBy.length > 0 : false,
+    }));
+
+    res.status(200).json(formattedPosts);
+
   } catch (error) {
-    console.error('Error fetching posts:', error);
-    res.status(500).json({ error: 'An error occurred while fetching posts.' });
+    console.error("Error fetching all posts:", error);
+    res.status(500).json({ error: "Could not fetch posts." });
   }
 };
 
