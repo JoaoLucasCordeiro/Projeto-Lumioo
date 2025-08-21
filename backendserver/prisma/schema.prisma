@@ -23,14 +23,16 @@ model User {
   institution   String
   academicLevel AcademicLevel
   dateOfBirth   DateTime
+  bio           String?       @db.Text 
+  avatar        String?       @db.Text 
+  coverPhoto    String?       @db.Text 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  // Relações
   posts      Post[]
   comments   Comment[]
   likes      Like[]
-  savedPosts SavedPost[] @relation("SavedByUsers")
+  savedPosts SavedPost[] @relation("SavedByUsers") 
   projects   Project[]
   works      Work[]
 
@@ -46,7 +48,6 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relações
   author   User        @relation(fields: [authorId], references: [id])
   authorId String
   comments Comment[]
@@ -62,7 +63,6 @@ model Comment {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relações
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
   post     Post   @relation(fields: [postId], references: [id])
@@ -118,17 +118,14 @@ model Project {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  // Relação com o dono do projeto
   owner   User   @relation(fields: [ownerId], references: [id])
   ownerId String
 
-  // Relação com os membros da equipe
   teamMembers TeamMember[]
 
   @@map("projects")
 }
 
-// Model para os Membros da Equipe
 model TeamMember {
   id    String  @id @default(cuid())
   name  String
@@ -166,7 +163,6 @@ model Work {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relação com o autor/uploader do trabalho
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
 
