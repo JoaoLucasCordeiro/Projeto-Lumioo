@@ -4,9 +4,8 @@ import { authenticateToken } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-
 // Rotas públicas
-router.get('/projects', getAllProjects);
+router.get('/projects', getAllProjects); 
 router.get('/projects/:id', getProjectById);
 
 // Rotas protegidas
