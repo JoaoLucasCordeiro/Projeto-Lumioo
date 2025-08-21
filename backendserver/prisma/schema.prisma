@@ -110,6 +110,7 @@ model Project {
   id           String        @id @default(cuid())
   title        String
   description  String
+  category     String
   image        String?
   status       ProjectStatus
   contactEmail String?
