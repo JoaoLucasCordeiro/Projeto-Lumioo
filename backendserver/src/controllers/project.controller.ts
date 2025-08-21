@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ProjectStatus } from '@prisma/client';
+import { Prisma, PrismaClient, ProjectStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +22,7 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
   const {
     title,
     description,
+    category, 
     image,
     status,
     contactEmail,
@@ -29,9 +30,8 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
     teamMembers,
   } = req.body;
 
-  // --- Validações ---
-  if (!title || !description || !status || !teamMembers) {
-    return res.status(400).json({ error: 'Title, description, status, and teamMembers are required.' });
+  if (!title || !description || !category || !status || !teamMembers) {
+    return res.status(400).json({ error: 'Title, description, category, status, and teamMembers are required.' });
   }
 
   if (!Object.values(ProjectStatus).includes(status.toUpperCase())) {
@@ -51,6 +51,7 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
       data: {
         title,
         description,
+        category, 
         image,
         status: status.toUpperCase() as ProjectStatus,
         contactEmail,
@@ -78,14 +79,59 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
 
 export const getAllProjects = async (req: Request, res: Response) => {
   try {
-    const projects = await prisma.project.findMany({
-      include: { teamMembers: true },
+    const { search, category, year } = req.query;
+
+    const whereClause: Prisma.ProjectWhereInput = {};
+
+    if (search) {
+      const searchString = search as string;
+      whereClause.OR = [
+        { title: { contains: searchString, mode: 'insensitive' } },
+        { description: { contains: searchString, mode: 'insensitive' } },
+        { owner: { fullName: { contains: searchString, mode: 'insensitive' } } },
+      ];
+    }
+
+    if (category && category !== 'all') {
+      whereClause.category = { equals: category as string, mode: 'insensitive' };
+    }
+
+    if (year && year !== 'all') {
+      const numericYear = parseInt(year as string);
+      if (!isNaN(numericYear)) {
+        whereClause.createdAt = {
+          gte: new Date(numericYear, 0, 1),
+          lt: new Date(numericYear + 1, 0, 1),
+        };
+      }
+    }
+
+    const projectsFromDb = await prisma.project.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
+      include: {
+        owner: { select: { fullName: true } },
+        _count: { select: { teamMembers: true } },
+      },
     });
-    res.status(200).json(projects);
+
+    const formattedProjects = projectsFromDb.map(project => ({
+      id: project.id,
+      title: project.title,
+      description: project.description,
+      category: project.category,
+      year: new Date(project.createdAt).getFullYear().toString(),
+      image: project.image,
+      members: project._count.teamMembers,
+      institution: project.owner.fullName, 
+      status: project.status,
+    }));
+
+    res.status(200).json(formattedProjects);
+
   } catch (error) {
-    console.error('Error fetching projects:', error);
-    res.status(500).json({ error: 'An error occurred while fetching projects.' });
+    console.error("Error fetching projects:", error);
+    res.status(500).json({ error: "Could not fetch projects." });
   }
 };
 
@@ -94,15 +140,40 @@ export const getProjectById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const project = await prisma.project.findUnique({
       where: { id },
-      include: { teamMembers: true },
+      include: {
+        owner: { select: { fullName: true } },
+        teamMembers: true, 
+      },
     });
+
     if (!project) {
       return res.status(404).json({ error: 'Project not found.' });
     }
-    res.status(200).json(project);
+
+    const formattedProject = {
+      id: project.id,
+      title: project.title,
+      description: project.description, 
+      detailedDescription: project.description, 
+      category: project.category,
+      year: new Date(project.createdAt).getFullYear().toString(),
+      image: project.image,
+      members: project.teamMembers.length,
+      institution: project.owner.fullName, 
+      status: project.status,
+      team: project.teamMembers.map(member => ({
+        name: member.name,
+        role: member.role,
+        photo: member.photo,
+      })),
+      publications: [], 
+      ownerId: project.ownerId, 
+    };
+
+    res.status(200).json(formattedProject);
   } catch (error) {
-    console.error('Error fetching project:', error);
-    res.status(500).json({ error: 'An error occurred while fetching the project.' });
+    console.error("Error fetching project details:", error);
+    res.status(500).json({ error: "Could not fetch project details." });
   }
 };
 
@@ -138,7 +209,6 @@ export const updateProject = async (req: AuthenticatedRequest, res: Response) =>
         status: status ? status.toUpperCase() : undefined,
         contactEmail,
         contactPhone,
-        // Para atualizar teamMembers, normalmente é necessário lógica extra (remover, adicionar, atualizar membros)
       },
       include: { teamMembers: true },
     });
