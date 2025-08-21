@@ -218,13 +218,17 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response) => {
     }
     const { id } = req.params;
     const post = await prisma.post.findUnique({ where: { id } });
+    
     if (!post) {
       return res.status(404).json({ error: 'Post not found.' });
     }
     if (post.authorId !== userId) {
       return res.status(403).json({ error: 'You are not authorized to delete this post.' });
     }
+
+    // Agora, só precisamos deletar o post. O Prisma e o DB farão o resto.
     await prisma.post.delete({ where: { id } });
+    
     res.status(204).send();
   } catch (error) {
     console.error('Error deleting post:', error);
