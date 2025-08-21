@@ -4,6 +4,12 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+interface AuthenticatedRequest extends Request {
+  user?: { userId: string };
+}
+
+// ... (suas funções createUser, getAllUsers, getUserById, getMyProfile)
+
 export const createUser = async (req: Request, res: Response) => {
   try {
     const { fullName, academicEmail, username, password, institution, academicLevel, dateOfBirth } = req.body;
@@ -66,33 +72,146 @@ export const getUserById = async (req: Request, res: Response) => {
   }
 };
 
+export const getMyProfile = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(403).json({ error: 'User not authenticated.' });
+  }
 
-export const updateUser = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const { fullName, username, institution, academicLevel, dateOfBirth } = req.body;
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        fullName: true,
+        username: true,
+        academicEmail: true,
+        institution: true,
+        academicLevel: true,
+        dateOfBirth: true,
+        createdAt: true,
+        bio: true,
+        avatar: true,
+        coverPhoto: true,
+        _count: {
+          select: {
+            posts: true,
+          }
+        },
+        posts: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            author: { select: { username: true, avatar: true } },
+            likes: { select: { userId: true } },
+            _count: { select: { comments: true } },
+            savedBy: { where: { userId }, select: { userId: true } },
+          }
+        },
+        savedPosts: {
+          orderBy: { savedAt: 'desc' },
+          select: {
+            post: {
+              include: {
+                author: { select: { username: true, avatar: true } },
+                likes: { select: { userId: true } },
+                _count: { select: { comments: true } },
+                savedBy: { where: { userId }, select: { userId: true } },
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: 'Profile not found.' });
+    }
+
+    const formattedProfile = {
+      fullName: userProfile.fullName,
+      username: userProfile.username,
+      email: userProfile.academicEmail,
+      institution: userProfile.institution,
+      academicLevel: userProfile.academicLevel,
+      birthDate: userProfile.dateOfBirth.toISOString(),
+      joinDate: userProfile.createdAt.toISOString(),
+      bio: userProfile.bio || '',
+      avatar: userProfile.avatar,
+      coverPhoto: userProfile.coverPhoto,
+      followers: 0,
+      following: 0,
+      posts: userProfile._count.posts,
+      userPosts: userProfile.posts.map(post => ({
+        id: post.id,
+        username: post.author.username,
+        authorId: post.authorId,
+        userImage: userProfile.avatar,
+        image: post.image,
+        caption: post.caption,
+        likes: post.likes.length,
+        comments: post._count.comments,
+        timePosted: post.createdAt.toISOString(),
+        isLiked: post.likes.some(like => like.userId === userId),
+        isSaved: post.savedBy.length > 0,
+      })),
+      savedPosts: userProfile.savedPosts.map(saved => ({
+        id: saved.post.id,
+        username: saved.post.author.username,
+        authorId: saved.post.authorId,
+        userImage: saved.post.author.avatar,
+        image: saved.post.image,
+        caption: saved.post.caption,
+        likes: saved.post.likes.length,
+        comments: saved.post._count.comments,
+        timePosted: saved.post.createdAt.toISOString(),
+        isLiked: saved.post.likes.some(like => like.userId === userId),
+        isSaved: true,
+      }))
+    };
+
+    res.status(200).json(formattedProfile);
+
+  } catch (error) {
+    console.error("Error fetching profile:", error);
+    res.status(500).json({ error: "Could not fetch profile." });
+  }
+};
+
+export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
+  // Pega o ID diretamente do token. Mais seguro!
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(403).json({ error: 'User not authenticated.' });
+  }
+
+  const { fullName, username, bio, avatar, coverPhoto } = req.body;
+
+  try {
+    if (username) {
+        const existingUser = await prisma.user.findUnique({ where: { username } });
+        if (existingUser && existingUser.id !== userId) {
+            return res.status(409).json({ error: 'Username already taken.' });
+        }
+    }
 
     const updatedUser = await prisma.user.update({
-      where: { id },
+      where: { id: userId }, // Usa o ID do token para a atualização
       data: {
         fullName,
         username,
-        institution,
-        academicLevel,
-        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+        bio,
+        avatar,
+        coverPhoto,
       },
     });
 
-    res.status(200).json(updatedUser);
+    const { password, ...userWithoutPassword } = updatedUser;
+    res.status(200).json(userWithoutPassword);
   } catch (error) {
     console.error('Error updating user:', error);
-     // Handle case where user to update is not found
-    if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
-        return res.status(404).json({ error: 'User not found.' });
-    }
     res.status(500).json({ error: 'An error occurred while updating the user.' });
   }
 };
+
 
 
 export const deleteUser = async (req: Request, res: Response) => {
