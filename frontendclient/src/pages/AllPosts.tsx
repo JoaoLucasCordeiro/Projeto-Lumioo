@@ -22,7 +22,7 @@ export function AllPosts() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // 500ms de delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   const fetchPosts = useCallback(async (query: string) => {
     setIsLoading(true);
