@@ -7,7 +7,7 @@ import { Sidebar } from "@/components/shared/Sidebar";
 import { Button } from "@/components/ui/button";
 import { WorksHeader } from "@/components/shared/WorksHeader";
 import { WorksFilters } from "@/components/shared/WorksFilter";
-import { WorksGrid } from "@/components/shared/WroksGrid";
+import { WorksGrid } from "@/components/shared/WroksGrid"; // Corrigido o nome do arquivo se necessário
 import { useDebounce } from "@/hooks/useDebouce";
 
 interface AcademicWork {
@@ -21,7 +21,7 @@ interface AcademicWork {
   keywords: string[];
   downloads: number;
   fileUrl: string;
-  image: string | null; // A API pode retornar null
+  image: string | null;
 }
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -130,11 +130,13 @@ export function WorksPage() {
             <div className="text-center py-12 text-red-400">{error}</div>
           ) : (
             <>
-              {/* --- CORREÇÃO AQUI --- */}
-              <WorksGrid works={allWorks.map(work => ({
-                ...work,
-                image: work.image || PLACEHOLDER_IMAGE_URL, // Garante que a imagem nunca seja null
-              }))} />
+              <WorksGrid 
+                works={allWorks.map(work => ({
+                  ...work,
+                  image: work.image || PLACEHOLDER_IMAGE_URL,
+                }))} 
+                onUpdate={fetchWorks} // <-- Passando a função de update
+              />
               
               {allWorks.length === 0 && (
                 <div className="text-center py-12">

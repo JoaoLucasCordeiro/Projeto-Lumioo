@@ -1,3 +1,4 @@
+// src/components/shared/WroksGrid.tsx
 import { motion } from "framer-motion";
 import { WorkCard } from "./WorksCard";
 
@@ -14,15 +15,12 @@ interface WorksGridProps {
     fileUrl: string;
     image: string;
   }>;
+  onUpdate: () => void; // <-- Adicionado
 }
 
-export function WorksGrid({ works }: WorksGridProps) {
+export function WorksGrid({ works, onUpdate }: WorksGridProps) {
   if (works.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-slate-400">Nenhum trabalho encontrado com os filtros selecionados</p>
-      </div>
-    );
+    return null; // A mensagem de "nenhum trabalho" já é tratada na página principal
   }
 
   return (
@@ -34,7 +32,7 @@ export function WorksGrid({ works }: WorksGridProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: index * 0.1 }}
         >
-          <WorkCard work={work} />
+          <WorkCard work={work} onUpdate={onUpdate} /> {/* <-- Passando a prop */}
         </motion.div>
       ))}
     </div>
