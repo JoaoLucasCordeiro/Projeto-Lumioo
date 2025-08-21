@@ -1,93 +1,84 @@
-import { MoreHorizontal, Flag, Edit, Trash2, Bookmark, Mail, Heart, MessageCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Bookmark } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { useState } from "react";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from '@/contexts/auth.context';
+import type { Post } from '@/types/feed';
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 interface ProfilePostCardProps {
-  post: {
-    id: string;
-    username: string;
-    userImage: string;
-    image: string;
-    caption: string;
-    likes: number;
-    comments: number;
-    timePosted: string;
-    isLiked: boolean;
-    isSaved: boolean;
-  };
+  post: Post;
   isOwner: boolean;
-  onLike: (postId: string) => void;
-  onSave: (postId: string) => void;
-  onDelete: (postId: string) => void;
+  onUpdate: () => void;
 }
-// tinha o onLike aqui nos parametros
-export function ProfilePostCard({ post, isOwner, onSave, onDelete }: ProfilePostCardProps) {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
-  const [reportReason, setReportReason] = useState("");
-  // const [isLiked, setIsLiked] = useState(post.isLiked);
-  const [isSaved, setIsSaved] = useState(post.isSaved);
-  // const [likesCount, setLikesCount] = useState(post.likes);
+
+export function ProfilePostCard({ post, isOwner, onUpdate }: ProfilePostCardProps) {
+  const navigate = useNavigate();
+  const { token } = useAuth();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  // const handleLike = (e: React.MouseEvent) => {
-  //   e.stopPropagation();
-  //   setIsLiked(!isLiked);
-  //   setLikesCount(isLiked ? likesCount - 1 : likesCount + 1);
-  //   onLike(post.id);
-  // };
-
-  const handleSave = (e: React.MouseEvent) => {
+  const handleLike = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsSaved(!isSaved);
-    onSave(post.id);
-    setIsMenuOpen(false);
+    if (!token) return;
+    try {
+      await fetch(`${API_URL}/posts/${post.id}/like`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      onUpdate(); 
+    } catch (error) {
+      console.error("Failed to like post:", error);
+    }
+  };
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!token) return;
+    try {
+      await fetch(`${API_URL}/posts/${post.id}/save`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      onUpdate(); 
+    } catch (error) {
+      console.error("Failed to save post:", error);
+    }
   };
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDelete(post.id);
-    setIsMenuOpen(false);
+    setIsDeleteDialogOpen(true);
   };
 
-  const handleReport = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsMenuOpen(false);
-    setIsReportDialogOpen(true);
-  };
-
-  const handleContact = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    console.log("Entrar em contato sobre post:", post.id);
-    setIsMenuOpen(false);
-  };
-
-  const handleSubmitReport = () => {
-    console.log("Denunciar post:", post.id, "Motivo:", reportReason);
-    setIsReportDialogOpen(false);
-    setReportReason("");
-  };
-
-  const handleCancelReport = () => {
-    setIsReportDialogOpen(false);
-    setReportReason("");
+  const handleConfirmDelete = async () => {
+    if (!token || !isOwner) return;
+    try {
+      await fetch(`${API_URL}/posts/${post.id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      onUpdate();
+    } catch (error) {
+      console.error("Failed to delete post:", error);
+    }
   };
 
   return (
@@ -96,31 +87,30 @@ export function ProfilePostCard({ post, isOwner, onSave, onDelete }: ProfilePost
         className="relative aspect-square overflow-hidden rounded-lg group cursor-pointer"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
+        onClick={() => navigate(`/post/${post.id}`)}
       >
-        {/* Imagem do post */}
         <img
           src={post.image}
           alt={post.caption}
           className="w-full h-full object-cover"
         />
 
-        {/* Overlay com interações ao passar o mouse */}
-        {isHovered && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center gap-6 text-white">
-            <div className="flex items-center gap-1 font-semibold">
-              <Heart className="h-6 w-6 fill-current" />
-              <span>100</span>
-            </div>
-            <div className="flex items-center gap-1 font-semibold">
-              <MessageCircle className="h-6 w-6" />
-              <span>{post.comments}</span>
-            </div>
+        <div 
+          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 text-white"
+        >
+          {/* --- CORREÇÃO AQUI: onClick adicionado --- */}
+          <button onClick={handleLike} className="flex items-center gap-1 font-semibold bg-transparent border-none">
+            <Heart className={`h-6 w-6 ${post.isLiked ? 'fill-white' : ''}`} />
+            <span>{post.likes}</span>
+          </button>
+          <div className="flex items-center gap-1 font-semibold">
+            <MessageCircle className="h-6 w-6" />
+            <span>{post.comments}</span>
           </div>
-        )}
+        </div>
 
-        {/* Botão de menu de opções */}
         <div className="absolute top-2 right-2 z-10">
-          <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
@@ -149,101 +139,41 @@ export function ProfilePostCard({ post, isOwner, onSave, onDelete }: ProfilePost
                     className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
                     onClick={(e) => {
                       e.stopPropagation();
-                      console.log("Editar post:", post.id);
-                      setIsMenuOpen(false);
+                      navigate(`/post/${post.id}/edit`);
                     }}
                   >
                     <Edit className="h-4 w-4 mr-2 text-red-400" />
                     <span>Editar</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleSave}
-                  >
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
-                  </DropdownMenuItem>
                 </>
               ) : (
-                <>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleSave}
-                  >
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleContact}
-                  >
-                    <Mail className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Entrar em contato</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleReport}
-                  >
-                    <Flag className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Denunciar</span>
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem 
+                  className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
+                  onClick={handleSave}
+                >
+                  <Bookmark className="h-4 w-4 mr-2 text-red-400" />
+                  <span>{post.isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
+                </DropdownMenuItem>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* Modal de Denúncia */}
-      <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
-        <DialogContent className="bg-slate-800 border-slate-700 text-slate-200 sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-red-400">Denunciar Post</DialogTitle>
-            <DialogDescription className="text-slate-400">
-              Por favor, selecione o motivo da denúncia. Sua denúncia é anônima.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="reason" className="text-right text-slate-300">
-                Motivo
-              </Label>
-              <Select value={reportReason} onValueChange={setReportReason}>
-                <SelectTrigger className="col-span-3 bg-slate-700 border-slate-600 text-slate-200">
-                  <SelectValue placeholder="Selecione um motivo" />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-700 border-slate-600 text-slate-200">
-                  <SelectItem value="inappropriate">Conteúdo inadequado</SelectItem>
-                  <SelectItem value="spam">Spam</SelectItem>
-                  <SelectItem value="false_info">Informação falsa</SelectItem>
-                  <SelectItem value="harassment">Assédio</SelectItem>
-                  <SelectItem value="other">Outro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={handleCancelReport}
-              className="bg-transparent text-slate-300 border-slate-600 hover:bg-slate-700"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              type="submit" 
-              onClick={handleSubmitReport}
-              disabled={!reportReason}
-              className="bg-red-500 text-white hover:bg-red-600 disabled:opacity-50"
-            >
-              Enviar Denúncia
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="bg-slate-800 border-slate-700 text-slate-200">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-400">Deletar Publicação?</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-400">
+              Esta ação é permanente. Você tem certeza que quer deletar este post?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Deletar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

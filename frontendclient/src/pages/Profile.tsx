@@ -1,155 +1,145 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../components/shared/Sidebar";
 import { ProfileHeader } from "@/components/shared/ProfileHeader";
 import { MobileSidebar } from "@/components/shared/MobileSidebar";
 import { ProfileTabs } from "@/components/shared/ProfileTabs";
 import { ProfileInfo } from "@/components/shared/ProfileInfo";
+import { useAuth } from "@/contexts/auth.context";
+import type { Post } from "@/types/feed";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
+interface UserProfileData {
+  fullName: string;
+  username: string;
+  email: string;
+  institution: string;
+  academicLevel: string;
+  birthDate: string;
+  joinDate: string;
+  bio: string | null;
+  avatar: string | null;
+  coverPhoto: string | null;
+  posts: number;
+  followers: number;
+  following: number;
+  userPosts: Post[];
+  savedPosts: Post[];
+}
 
 export function ProfilePage() {
+  const { token, updateUserContext } = useAuth(); // Pega a função de update do contexto
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const isOwner = true; // Simulando que o usuário atual é dono do perfil
+  
+  const [profileData, setProfileData] = useState<UserProfileData | null>(null);
+  const [editableData, setEditableData] = useState<Partial<UserProfileData>>({});
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Dados completos do usuário
-  const userData = {
-    fullName: "João Lucas",
-    username: "joao_pesquisador",
-    email: "joao@academico.ufpe.br",
-    institution: "Universidade Federal de Pernambuco",
-    academicLevel: "Doutorado",
-    birthDate: "1990-05-15",
-    joinDate: "2022-03-10",
-    bio: "Pesquisador em Inteligência Artificial aplicada à Saúde. Mestre em Ciência da Computação e atualmente cursando Doutorado.",
-    avatar: "/user-avatar.jpg",
-    coverPhoto: "/profile-cover.jpg",
-    followers: 342,
-    following: 156,
-    posts: 28
-  };
-
-  // Posts completos do usuário
-  const [userPosts, setUserPosts] = useState([
-    {
-      id: '1',
-      username: userData.username,
-      userImage: userData.avatar,
-      image: '/joaolucas.jpg',
-      caption: 'Novos resultados da nossa pesquisa em diagnóstico médico assistido por IA! #Saúde #IA',
-      likes: 1243,
-      comments: 42,
-      timePosted: '2h atrás',
-      isLiked: false,
-      isSaved: true
-    },
-    {
-      id: '2',
-      username: userData.username,
-      userImage: userData.avatar,
-      image: '/post2.jpg',
-      caption: 'Participando do Congresso Internacional de IA em Saúde em Boston. Ótimas discussões! #Evento #Pesquisa',
-      likes: 856,
-      comments: 23,
-      timePosted: '5h atrás',
-      isLiked: true,
-      isSaved: false
-    },
-    {
-      id: '3',
-      username: userData.username,
-      userImage: userData.avatar,
-      image: '/post3.jpg',
-      caption: 'Publicação do nosso novo artigo na revista Nature Medicine sobre algoritmos de diagnóstico precoce',
-      likes: 2105,
-      comments: 87,
-      timePosted: '1d atrás',
-      isLiked: false,
-      isSaved: true
+  const fetchProfile = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${API_URL}/profile`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error("Falha ao buscar dados do perfil.");
+      const data = await response.json();
+      setProfileData(data);
+      setEditableData(data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoading(false);
     }
-  ]);
+  }, [token]);
 
-  // Posts salvos completos
-  const [savedPosts, setSavedPosts] = useState([
-    {
-      id: 's1',
-      username: 'lab_saude_digital',
-      userImage: '/user-lab.jpg',
-      image: '/saved1.jpg',
-      caption: 'Novas técnicas de processamento de imagens médicas usando redes neurais',
-      likes: 3421,
-      comments: 156,
-      timePosted: '3d atrás',
-      isLiked: false,
-      isSaved: true
-    },
-    {
-      id: 's2',
-      username: 'ia_medica',
-      userImage: '/user-ia.jpg',
-      image: '/saved2.jpg',
-      caption: 'Conjunto de dados aberto para pesquisa em diagnóstico por imagem',
-      likes: 1256,
-      comments: 42,
-      timePosted: '1sem atrás',
-      isLiked: true,
-      isSaved: true
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
+
+  const handleUpdate = () => {
+    fetchProfile();
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+        if (profileData) setEditableData(profileData);
     }
-  ]);
-
-  // Funções para manipular interações com posts
-  const handleLike = (postId: string) => {
-    console.log("Curtir post:", postId);
-    // Lógica para curtir/descurtir post
+    setIsEditing(!isEditing);
   };
 
-  const handleSave = (postId: string) => {
-    console.log("Salvar post:", postId);
-    // Lógica para salvar/remover post dos salvos
+  const handleDataChange = (field: keyof UserProfileData, value: string | null) => {
+    setEditableData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleDelete = (postId: string) => {
-    console.log("Deletar post:", postId);
-    // Lógica para deletar post
-    setUserPosts(userPosts.filter(post => post.id !== postId));
+  const handleSaveChanges = async () => {
+    if (!token) return;
+    setIsLoading(true);
+    try {
+        const response = await fetch(`${API_URL}/profile`, { // Usa a rota /profile que funciona
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(editableData)
+        });
+        const updatedUserData = await response.json();
+        if (!response.ok) throw new Error("Falha ao salvar alterações");
+
+        // --- A LINHA QUE FALTAVA ---
+        // Atualiza o contexto global com os novos dados do usuário
+        updateUserContext(updatedUserData);
+
+        setIsEditing(false);
+        await fetchProfile(); // Recarrega os dados da página de perfil
+    } catch (error) {
+        console.error("Failed to save changes:", error);
+    } finally {
+        setIsLoading(false);
+    }
   };
+
+  if (isLoading && !profileData) {
+    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando perfil...</div>;
+  }
+
+  if (!profileData) {
+    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-red-500">Erro ao carregar o perfil.</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
-      {/* Sidebar Desktop */}
       <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
       </div>
 
-      {/* Botão do Menu Mobile */}
       <MobileSidebar 
         mobileSidebarOpen={mobileSidebarOpen} 
         setMobileSidebarOpen={setMobileSidebarOpen} 
       />
 
-      {/* Conteúdo principal */}
       <main className="overflow-y-auto">
         <ProfileHeader 
-          userData={userData}
-          isOwner={isOwner}
+          userData={editableData}
+          isOwner={true}
           isEditing={isEditing}
-          onEditToggle={() => setIsEditing(!isEditing)}
+          onEditToggle={handleEditToggle}
+          onDataChange={handleDataChange}
+          onSaveChanges={handleSaveChanges}
         />
 
         <ProfileTabs 
-          userPosts={userPosts}
-          savedPosts={savedPosts}
-          isOwner={isOwner}
-          onLike={handleLike}
-          onSave={handleSave}
-          onDelete={handleDelete}
+          userPosts={profileData.userPosts}
+          savedPosts={profileData.savedPosts}
+          isOwner={true}
+          onUpdate={handleUpdate}
         />
 
-        {isOwner && (
-          <ProfileInfo 
-            userData={userData}
-            isEditing={isEditing}
-          />
-        )}
+        <ProfileInfo 
+          userData={profileData}
+          isEditing={isEditing}
+        />
       </main>
     </div>
   );

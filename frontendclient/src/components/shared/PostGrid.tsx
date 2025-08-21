@@ -1,27 +1,13 @@
 import { ProfilePostCard } from "./ProfilePostCard";
-
-interface Post {
-  id: string;
-  username: string;
-  userImage: string;
-  image: string;
-  caption: string;
-  likes: number;
-  comments: number;
-  timePosted: string;
-  isLiked: boolean;
-  isSaved: boolean;
-}
+import type { Post } from "@/types/feed"; // Certifique-se que o tipo Post está correto
 
 interface PostGridProps {
   posts: Post[];
   isOwner: boolean;
-  onLike: (postId: string) => void;
-  onSave: (postId: string) => void;
-  onDelete: (postId: string) => void;
+  onUpdate: () => void; // Corrigido para aceitar onUpdate
 }
 
-export function PostGrid({ posts, isOwner, onLike, onSave, onDelete }: PostGridProps) {
+export function PostGrid({ posts, isOwner, onUpdate }: PostGridProps) {
   if (posts.length === 0) {
     return (
       <div className="text-center py-12 text-slate-400">
@@ -37,9 +23,7 @@ export function PostGrid({ posts, isOwner, onLike, onSave, onDelete }: PostGridP
           key={post.id}
           post={post}
           isOwner={isOwner}
-          onLike={onLike}
-          onSave={onSave}
-          onDelete={onDelete}
+          onUpdate={onUpdate} // Passa a função onUpdate para cada card
         />
       ))}
     </div>
