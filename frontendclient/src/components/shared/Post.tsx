@@ -1,3 +1,4 @@
+// src/components/shared/Post.tsx
 import { useEffect, useState } from 'react';
 import { Heart, MessageCircle, Bookmark, MoreHorizontal, Clock, Flag, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -31,7 +32,7 @@ interface PostProps {
   id: string;
   username: string;
   authorId: string; 
-  userImage: string;
+  userImage: string | null; // A foto pode ser nula
   image: string;
   caption: string;
   likes: number;
@@ -84,7 +85,7 @@ export function Post({
 }: PostProps) {
   const { user, token } = useAuth();
   const navigate = useNavigate();
-  const timeAgo = useTimeAgo(timePosted); // 2. Usar o hook para formatar a data
+  const timeAgo = useTimeAgo(timePosted);
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -163,7 +164,7 @@ export function Post({
         <div className="flex items-center justify-between p-6 border-b border-slate-800">
           <div className="flex items-center space-x-4">
             <Avatar className="h-12 w-12 border-2 border-red-500/30">
-              <AvatarImage src={userImage} alt={username} />
+              <AvatarImage src={userImage || undefined} alt={username} />
               <AvatarFallback className="bg-slate-800 text-red-400 font-bold">{username.charAt(0).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div>
