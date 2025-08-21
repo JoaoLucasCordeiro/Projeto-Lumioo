@@ -13,7 +13,7 @@ yarn-error.log*
 
 # Environment files
 .env
-.env.*
+
 
 # Prisma
 prisma/dev.db
