@@ -9,14 +9,12 @@ import { useState, useEffect, useCallback } from "react";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-// Dicionário para traduzir os status do projeto
 const STATUS_DISPLAY_MAP: { [key: string]: string } = {
   IN_PROGRESS: 'Em andamento',
   COMPLETED: 'Concluído',
   OPEN_FOR_APPLICATIONS: 'Aberto para inscrições'
 };
 
-// Interfaces para os tipos de dados
 interface TeamMember {
   name: string;
   role: string;
@@ -51,7 +49,6 @@ export function ProjectDetailsPage() {
   
   const [project, setProject] = useState<ProjectDetailsData | null>(null);
   const [loading, setLoading] = useState(true);
-  // Removido o mock de projetos relacionados, pois essa lógica virá do backend no futuro
 
   const fetchProject = useCallback(async () => {
     if (!id) return;
