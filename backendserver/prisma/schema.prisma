@@ -65,7 +65,8 @@ model Comment {
 
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
-  post     Post   @relation(fields: [postId], references: [id])
+  // --- CORREÇÃO AQUI ---
+  post     Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId   String
   likes    Like[]
 
@@ -79,9 +80,11 @@ model Like {
   user   User   @relation(fields: [userId], references: [id])
   userId String
 
-  post      Post?    @relation(fields: [postId], references: [id])
+  // --- CORREÇÃO AQUI ---
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId    String?
-  comment   Comment? @relation(fields: [commentId], references: [id])
+  // --- E AQUI ---
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   commentId String?
 
   @@unique([userId, postId])
@@ -92,7 +95,8 @@ model Like {
 model SavedPost {
   user    User     @relation("SavedByUsers", fields: [userId], references: [id])
   userId  String
-  post    Post     @relation("SavedByUsers", fields: [postId], references: [id])
+  // --- CORREÇÃO AQUI ---
+  post    Post     @relation("SavedByUsers", fields: [postId], references: [id], onDelete: Cascade)
   postId  String
   savedAt DateTime @default(now())
 
