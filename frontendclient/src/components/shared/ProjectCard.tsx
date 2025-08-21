@@ -21,6 +21,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { useState } from 'react';
 
+// --- DICIONÁRIO DE TRADUÇÃO ---
+const STATUS_DISPLAY_MAP: { [key: string]: string } = {
+  IN_PROGRESS: 'Em andamento',
+  COMPLETED: 'Concluído',
+  OPEN_FOR_APPLICATIONS: 'Aberto para inscrições'
+};
+
 interface ProjectCardProps {
   id: string;
   title: string;
@@ -50,64 +57,25 @@ export function ProjectCard({
   const [reportReason, setReportReason] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   
-
   const isOwner = false; 
 
-  const handleDeleteProject = () => {
-    // Lógica para deletar o projeto
-    console.log("Deletar projeto:", id);
-    setIsMenuOpen(false);
-  };
+  const handleDeleteProject = () => console.log("Deletar projeto:", id);
+  const handleEditProject = () => console.log("Editar projeto:", id);
+  const handleSaveProject = () => setIsSaved(!isSaved);
+  const handleReportProject = () => setIsReportDialogOpen(true);
+  const handleContactTeam = () => console.log("Entrar em contato com a equipe do projeto:", id);
+  const handleJoinProject = () => console.log("Solicitar participação no projeto:", id);
+  const handleSubmitReport = () => setIsReportDialogOpen(false);
+  const handleCancelReport = () => setIsReportDialogOpen(false);
 
-  const handleEditProject = () => {
-    // Lógica para editar o projeto
-    console.log("Editar projeto:", id);
-    setIsMenuOpen(false);
-  };
-
-  const handleSaveProject = () => {
-    // Lógica para salvar/remover dos salvos
-    console.log(isSaved ? "Remover dos salvos:" : "Salvar projeto:", id);
-    setIsSaved(!isSaved);
-    setIsMenuOpen(false);
-  };
-
-  const handleReportProject = () => {
-    setIsMenuOpen(false);
-    setIsReportDialogOpen(true);
-  };
-
-  const handleContactTeam = () => {
-    // Lógica para entrar em contato com a equipe
-    console.log("Entrar em contato com a equipe do projeto:", id);
-    setIsMenuOpen(false);
-  };
-
-  const handleJoinProject = () => {
-    // Lógica para solicitar participação no projeto
-    console.log("Solicitar participação no projeto:", id);
-    setIsMenuOpen(false);
-  };
-
-  const handleSubmitReport = () => {
-    // Lógica para enviar a denúncia
-    console.log("Denunciar projeto:", id, "Motivo:", reportReason);
-    setIsReportDialogOpen(false);
-    setReportReason("");
-  };
-
-  const handleCancelReport = () => {
-    setIsReportDialogOpen(false);
-    setReportReason("");
-  };
+  const displayStatus = STATUS_DISPLAY_MAP[status] || status;
 
   return (
     <>
       <div 
-        className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors cursor-pointer relative"
+        className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 hover:border-slate-600 transition-colors cursor-pointer relative h-full flex flex-col"
         onClick={() => navigate(`/projetos/${id}`)}
       >
-        {/* Botão de menu de opções */}
         <div className="absolute top-3 right-3 z-10">
           <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <DropdownMenuTrigger asChild>
@@ -127,60 +95,18 @@ export function ProjectCard({
             >
               {isOwner ? (
                 <>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleDeleteProject}
-                  >
-                    <Trash2 className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Deletar</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleEditProject}
-                  >
-                    <Edit className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Editar</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDeleteProject} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Trash2 className="h-4 w-4 mr-2 text-red-400" /><span>Deletar</span></DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleEditProject} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Edit className="h-4 w-4 mr-2 text-red-400" /><span>Editar</span></DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleSaveProject}
-                  >
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSaveProject} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Bookmark className="h-4 w-4 mr-2 text-red-400" /><span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span></DropdownMenuItem>
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleSaveProject}
-                  >
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleJoinProject}
-                  >
-                    <Users2 className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Participar</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleContactTeam}
-                  >
-                    <Mail className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Contatar equipe</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSaveProject} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Bookmark className="h-4 w-4 mr-2 text-red-400" /><span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span></DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleJoinProject} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Users2 className="h-4 w-4 mr-2 text-red-400" /><span>Participar</span></DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleContactTeam} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Mail className="h-4 w-4 mr-2 text-red-400" /><span>Contatar equipe</span></DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleReportProject}
-                  >
-                    <Flag className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Denunciar</span>
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleReportProject} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"><Flag className="h-4 w-4 mr-2 text-red-400" /><span>Denunciar</span></DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
@@ -200,31 +126,25 @@ export function ProjectCard({
           </div>
         </div>
         
-        <div className="p-5">
+        <div className="p-5 flex-1 flex flex-col">
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-lg font-bold text-slate-100">{title}</h3>
             <span className="text-sm text-slate-400">{year}</span>
           </div>
           
-          <p className="text-sm text-slate-300 mb-4 line-clamp-2">{description}</p>
+          <p className="text-sm text-slate-300 mb-4 line-clamp-2 flex-1">{description}</p>
           
           <div className="flex items-center space-x-3 text-sm text-slate-400 mb-4">
-            <div className="flex items-center space-x-1">
-              <Users className="h-4 w-4" />
-              <span>{members} membros</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Building2 className="h-4 w-4" />
-              <span>{institution}</span>
-            </div>
+            <div className="flex items-center space-x-1"><Users className="h-4 w-4" /><span>{members} membros</span></div>
+            <div className="flex items-center space-x-1"><Building2 className="h-4 w-4" /><span>{institution}</span></div>
           </div>
           
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mt-auto">
             <Badge 
-              variant={status === 'Concluído' ? 'default' : 'secondary'} 
-              className={status === 'Concluído' ? 'bg-green-900/30 text-green-400' : 'bg-blue-900/30 text-blue-400'}
+              variant={status === 'COMPLETED' ? 'default' : 'secondary'} 
+              className={status === 'COMPLETED' ? 'bg-green-900/30 text-green-400' : 'bg-blue-900/30 text-blue-400'}
             >
-              {status}
+              {displayStatus}
             </Badge>
             
             <Button 
