@@ -1,5 +1,5 @@
 import { Home, Bookmark, FileText, Folder, Settings, User, LogOut } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
-import { useAuth } from '@/contexts/auth.context'; // 1. Importar o hook de autenticação
+import { useAuth } from '@/contexts/auth.context';
 
 interface SidebarProps {
   onNavigate?: () => void;
@@ -21,8 +21,7 @@ interface SidebarProps {
 
 export function Sidebar({ onNavigate }: SidebarProps) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
-  const { user, logout } = useAuth(); // 2. Usar o hook para pegar o usuário e a função de logout
-  const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Feed', path: '/feed' },
@@ -34,24 +33,22 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   ];
 
   const handleLogout = () => {
-    logout(); // 3. Chamar a função de logout do contexto
+    logout();
     if (onNavigate) onNavigate();
   };
 
   return (
     <div className="flex flex-col h-full p-6 w-full">
-      {/* Logo */}
       <Link to="/" className="mb-10" onClick={onNavigate}>
         <div className="flex items-center justify-center space-x-3">
           <img src="/logo-lumioo-logged.svg" alt="Lumioo logo" className="h-24 w-auto" />
         </div>
       </Link>
 
-      {/* --- DADOS DO USUÁRIO AGORA SÃO DINÂMICOS --- */}
       <div className="flex items-center space-x-3 mb-8 p-3 rounded-lg bg-slate-800/50">
         <Avatar className="h-10 w-10 border-2 border-red-500/30">
-          {/* A imagem do usuário será implementada no futuro */}
-          <AvatarImage src={undefined} alt={user?.fullName} />
+          {/* --- CORREÇÃO AQUI --- */}
+          <AvatarImage src={user?.avatar || undefined} alt={user?.fullName} />
           <AvatarFallback className="bg-slate-700 text-red-400 font-bold">
             {user?.fullName?.charAt(0).toUpperCase() || '?'}
           </AvatarFallback>
@@ -62,7 +59,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </div>
 
-      {/* Itens de Navegação */}
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => (
           <motion.div
@@ -81,7 +77,6 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           </motion.div>
         ))}
 
-        {/* Botão de Sair */}
         <motion.div
           whileHover={{ x: 5 }}
           transition={{ duration: 0.2 }}
@@ -96,14 +91,12 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         </motion.div>
       </nav>
 
-      {/* Rodapé */}
       <div className="mt-auto pt-6 border-t border-slate-800">
         <p className="text-xs text-slate-500">
           © {new Date().getFullYear()} Lumioo. Todos os direitos reservados.
         </p>
       </div>
 
-      {/* Modal de confirmação de logout */}
       <AlertDialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <AlertDialogContent className="bg-slate-800 border-slate-700 text-slate-200">
           <AlertDialogHeader>
