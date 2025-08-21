@@ -5,64 +5,82 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
-import { ProjectCard } from "@/components/shared/ProjectCard";
+import { useState, useEffect, useCallback } from "react";
 
-// Dados de exemplo (deveriam vir de uma API na prática)
-const projectsData = [
-  {
-    id: '1',
-    title: 'Sistema de Gestão de Pesquisas',
-    description: 'Plataforma integrada para gerenciamento de projetos de pesquisa acadêmica com colaboração em tempo real. Este projeto visa criar uma solução completa que permita aos pesquisadores gerenciar todas as etapas de seus projetos, desde a submissão até a publicação dos resultados. A plataforma inclui ferramentas para colaboração, versionamento de documentos, agendamento de reuniões e integração com bases de dados acadêmicas.',
-    category: 'Software',
-    year: '2023',
-    image: '/project1.jpg',
-    members: 8,
-    institution: 'UPE',
-    status: 'Em andamento',
-    detailedDescription: 'O Sistema de Gestão de Pesquisas é uma plataforma web desenvolvida com React, Node.js e MongoDB. Ele oferece recursos avançados como:\n\n- Controle de versão para documentos de pesquisa\n- Ferramentas de colaboração em tempo real\n- Integração com ORCID e outras plataformas acadêmicas\n- Dashboard de métricas e acompanhamento de progresso\n\nO projeto está sendo desenvolvido em parceria com o departamento de Ciência da Computação da UPE e tem previsão de conclusão para dezembro de 2024.',
-    team: [
-      { name: 'Prof. Dr. Carlos Silva', role: 'Coordenador' },
-      { name: 'Dra. Ana Oliveira', role: 'Pesquisadora Principal' },
-      { name: 'MSc. João Santos', role: 'Desenvolvedor Sênior' },
-      { name: 'BSc. Maria Costa', role: 'Desenvolvedora Front-end' }
-    ],
-    publications: [
-      { title: 'Desafios na gestão de projetos de pesquisa acadêmica', conference: 'CONAC 2022' },
-      { title: 'Ferramentas colaborativas para pesquisa científica', journal: 'Journal of Academic Research' }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Análise de Dados Climáticos',
-    description: 'Estudo longitudinal das mudanças climáticas na região Nordeste nos últimos 50 anos.',
-    category: 'Ciência de Dados',
-    year: '2022',
-    image: '/project2.jpg',
-    members: 5,
-    institution: 'UFPE',
-    status: 'Concluído',
-    detailedDescription: 'Este projeto coletou e analisou dados climáticos de 20 estações meteorológicas na região Nordeste, identificando padrões e tendências nas mudanças climáticas. Utilizamos técnicas de machine learning para prever cenários futuros baseados nos dados históricos.\n\nPrincipais resultados:\n\n- Identificação de aumento médio de 1.2°C na temperatura regional\n- Redução de 15% no volume de chuvas nas últimas duas décadas\n- Desenvolvimento de modelo preditivo com 89% de acurácia',
-    team: [
-      { name: 'Prof. Dr. Roberto Lima', role: 'Coordenador' },
-      { name: 'Dra. Fernanda Alves', role: 'Cientista de Dados' }
-    ],
-    publications: [
-      { title: 'Mudanças climáticas no Nordeste brasileiro: 1970-2020', journal: 'Environmental Research' },
-      { title: 'Modelagem preditiva para microclimas', conference: 'Data Science Brazil 2021' }
-    ]
-  },
-  // ... outros projetos (adicionar conforme necessário)
-];
+const API_URL = import.meta.env.VITE_API_URL;
+
+// Dicionário para traduzir os status do projeto
+const STATUS_DISPLAY_MAP: { [key: string]: string } = {
+  IN_PROGRESS: 'Em andamento',
+  COMPLETED: 'Concluído',
+  OPEN_FOR_APPLICATIONS: 'Aberto para inscrições'
+};
+
+// Interfaces para os tipos de dados
+interface TeamMember {
+  name: string;
+  role: string;
+}
+
+interface Publication {
+    title: string;
+    conference?: string;
+    journal?: string;
+}
+
+interface ProjectDetailsData {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  year: string;
+  image: string | null;
+  members: number;
+  institution: string;
+  status: string;
+  detailedDescription: string;
+  team: TeamMember[];
+  publications: Publication[];
+  ownerId: string;
+}
 
 export function ProjectDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   
-  // Encontrar o projeto com base no ID
-  const project = projectsData.find(p => p.id === id);
+  const [project, setProject] = useState<ProjectDetailsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  // Removido o mock de projetos relacionados, pois essa lógica virá do backend no futuro
+
+  const fetchProject = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_URL}/projects/${id}`);
+      if (!response.ok) throw new Error("Projeto não encontrado");
+      const data = await response.json();
+      setProject(data);
+    } catch (error) {
+      console.error("Erro ao buscar detalhes do projeto:", error);
+      setProject(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchProject();
+  }, [fetchProject]);
   
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <p className="text-slate-400">Carregando projeto...</p>
+      </div>
+    );
+  }
+
   if (!project) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
@@ -79,123 +97,48 @@ export function ProjectDetailsPage() {
     );
   }
 
-  // Projetos relacionados (filtra por mesma categoria excluindo o atual)
-  const relatedProjects = projectsData.filter(
-    p => p.category === project.category && p.id !== project.id
-  ).slice(0, 2);
+  const displayStatus = STATUS_DISPLAY_MAP[project.status] || project.status;
 
   return (
     <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
-      {/* Sidebar Desktop (fixa) */}
-      <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
-        <Sidebar />
-      </div>
-
-      {/* Botão do Menu Mobile */}
+      <div className="hidden md:block sticky top-0 h-screen overflow-y-auto"><Sidebar /></div>
       <div className="md:hidden fixed top-4 left-4 z-20">
         <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-          <SheetTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="bg-slate-800/50 backdrop-blur-sm border-slate-700 text-slate-200 hover:bg-slate-700/50"
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="bg-slate-900/95 backdrop-blur-sm border-slate-800 p-0 w-[280px]">
-            <Sidebar onNavigate={() => setMobileSidebarOpen(false)} />
-          </SheetContent>
+          <SheetTrigger asChild><Button variant="outline" size="icon" className="bg-slate-800/50 backdrop-blur-sm border-slate-700 text-slate-200 hover:bg-slate-700/50"><Menu className="h-5 w-5" /></Button></SheetTrigger>
+          <SheetContent side="left" className="bg-slate-900/95 backdrop-blur-sm border-slate-800 p-0 w-[280px]"><Sidebar onNavigate={() => setMobileSidebarOpen(false)} /></SheetContent>
         </Sheet>
       </div>
-
-      {/* Conteúdo principal */}
       <main className="py-8 px-4 md:px-6 lg:px-8 overflow-y-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-4xl mx-auto"
-        >
-          {/* Cabeçalho Mobile */}
-          <div className="md:hidden flex items-center justify-between mb-8 pt-12">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => navigate('/projetos')}
-              className="text-slate-400 hover:text-slate-200"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar
-            </Button>
-            <h2 className="text-xl font-bold text-slate-100">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Detalhes</span>
-            </h2>
-          </div>
-
-          {/* Cabeçalho Desktop */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-4xl mx-auto">
           <div className="hidden md:flex items-center justify-between mb-8">
-            <Button 
-              variant="ghost" 
-              onClick={() => navigate('/projetos')}
-              className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Voltar para projetos
-            </Button>
+            <Button variant="ghost" onClick={() => navigate('/projetos')} className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"><ArrowLeft className="h-4 w-4 mr-2" />Voltar para projetos</Button>
           </div>
-
-          {/* Conteúdo do projeto */}
           <div className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50 mb-8">
-            {/* Imagem principal */}
             <div className="h-64 md:h-80 bg-slate-700 relative overflow-hidden">
-              <img 
-                src={project.image} 
-                alt={project.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute bottom-4 left-4">
-                <Badge variant="outline" className="bg-slate-900/80 backdrop-blur-sm border-slate-700 text-slate-200">
-                  {project.category}
-                </Badge>
-              </div>
+              <img src={project.image || "https://placehold.co/1200x400/1e293b/ef4444?text=Projeto"} alt={project.title} className="w-full h-full object-cover" />
+              <div className="absolute bottom-4 left-4"><Badge variant="outline" className="bg-slate-900/80 backdrop-blur-sm border-slate-700 text-slate-200">{project.category}</Badge></div>
             </div>
-            
-            {/* Informações principais */}
             <div className="p-6">
               <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-slate-100 mb-2">{project.title}</h1>
                   <div className="flex items-center space-x-4 text-slate-400 mb-4">
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>{project.year}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Building2 className="h-4 w-4" />
-                      <span>{project.institution}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Users className="h-4 w-4" />
-                      <span>{project.members} membros</span>
-                    </div>
+                    <div className="flex items-center space-x-1"><Calendar className="h-4 w-4" /><span>{project.year}</span></div>
+                    <div className="flex items-center space-x-1"><Building2 className="h-4 w-4" /><span>{project.institution}</span></div>
+                    <div className="flex items-center space-x-1"><Users className="h-4 w-4" /><span>{project.members} membros</span></div>
                   </div>
                 </div>
                 <Badge 
-                  variant={project.status === 'Concluído' ? 'default' : 'secondary'} 
-                  className={`text-sm ${project.status === 'Concluído' ? 'bg-green-900/30 text-green-400' : 'bg-blue-900/30 text-blue-400'}`}
+                  variant={project.status === 'COMPLETED' ? 'default' : 'secondary'} 
+                  className={`text-sm ${project.status === 'COMPLETED' ? 'bg-green-900/30 text-green-400' : 'bg-blue-900/30 text-blue-400'}`}
                 >
-                  {project.status}
+                  {displayStatus}
                 </Badge>
               </div>
-              
-              {/* Descrição detalhada */}
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-slate-100 mb-3">Sobre o projeto</h2>
                 <p className="text-slate-300 whitespace-pre-line">{project.detailedDescription}</p>
               </div>
-              
-              {/* Equipe */}
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-slate-100 mb-3">Equipe</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -207,8 +150,6 @@ export function ProjectDetailsPage() {
                   ))}
                 </div>
               </div>
-              
-              {/* Publicações */}
               {project.publications && project.publications.length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-xl font-semibold text-slate-100 mb-3">Publicações</h2>
@@ -225,18 +166,6 @@ export function ProjectDetailsPage() {
               )}
             </div>
           </div>
-          
-          {/* Projetos relacionados */}
-          {relatedProjects.length > 0 && (
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold text-slate-100 mb-4">Projetos relacionados</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {relatedProjects.map(project => (
-                  <ProjectCard key={project.id} {...project} />
-                ))}
-              </div>
-            </div>
-          )}
         </motion.div>
       </main>
     </div>
