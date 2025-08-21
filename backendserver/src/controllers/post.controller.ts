@@ -23,7 +23,8 @@ export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => 
       cursor: cursor ? { id: cursor as string } : undefined,
       orderBy: { createdAt: 'desc' },
       include: {
-        author: { select: { username: true } },
+        // CORREÇÃO AQUI: Agora também seleciona o avatar do autor
+        author: { select: { username: true, avatar: true } },
         likes: { select: { userId: true } },
         _count: { select: { comments: true } },
         savedBy: { where: { userId }, select: { userId: true } },
@@ -34,7 +35,7 @@ export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => 
       id: post.id,
       username: post.author.username,
       authorId: post.authorId, 
-      userImage: '/default-user.png',
+      userImage: post.author.avatar, // <-- USA O AVATAR DO AUTOR
       image: post.image,
       caption: post.caption,
       likes: post.likes.length,
@@ -97,7 +98,8 @@ export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
-        author: { select: { username: true } },
+        // CORREÇÃO AQUI: Garante que o avatar do autor seja buscado
+        author: { select: { username: true, avatar: true } },
         likes: { select: { userId: true } },
         _count: { select: { comments: true } },
         savedBy: { where: { userId }, select: { userId: true } },
@@ -108,7 +110,7 @@ export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
       id: post.id,
       username: post.author.username,
       authorId: post.authorId,
-      userImage: '/default-user.png',
+      userImage: post.author.avatar, // <-- USA O AVATAR CORRETO DO AUTOR
       image: post.image,
       caption: post.caption,
       likes: post.likes.length,
@@ -134,13 +136,14 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        author: { select: { username: true } },
+        // CORREÇÃO AQUI: Garante que o avatar do autor do post seja buscado
+        author: { select: { username: true, avatar: true } },
         likes: { select: { userId: true } },
         savedBy: { where: { userId }, select: { userId: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
           include: {
-            author: { select: { username: true } },
+            author: { select: { username: true, avatar: true } }, // E também o avatar de quem comentou
             likes: { select: { userId: true } },
           },
         },
@@ -155,7 +158,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
       id: post.id,
       username: post.author.username,
       authorId: post.authorId,
-      userImage: '/default-user.png',
+      userImage: post.author.avatar, // <-- USA O AVATAR CORRETO DO AUTOR
       image: post.image,
       caption: post.caption,
       likes: post.likes.length,
@@ -166,7 +169,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
         id: comment.id,
         username: comment.author.username,
         authorId: comment.authorId, 
-        userImage: '/default-user.png',
+        userImage: comment.author.avatar, // <-- USA O AVATAR CORRETO DE QUEM COMENTOU
         text: comment.text,
         timePosted: comment.createdAt.toISOString(),
         likes: comment.likes.length,
