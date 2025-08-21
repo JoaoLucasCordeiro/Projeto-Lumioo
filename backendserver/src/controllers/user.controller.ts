@@ -230,3 +230,44 @@ export const deleteUser = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'An error occurred while deleting the user.' });
   }
 };
+
+export const changePassword = async (req: AuthenticatedRequest, res: Response) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    return res.status(403).json({ error: 'User not authenticated.' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias.' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+
+    // Verifica se a senha atual está correta
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'A senha atual está incorreta.' });
+    }
+
+    // Criptografa a nova senha
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // Atualiza a senha no banco de dados
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword },
+    });
+
+    res.status(200).json({ message: 'Senha alterada com sucesso.' });
+
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ error: 'Ocorreu um erro ao alterar a senha.' });
+  }
+};
