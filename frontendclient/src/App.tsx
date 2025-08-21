@@ -6,7 +6,7 @@ import { AllPosts } from './pages/AllPosts';
 import { FeedPage } from './pages/Feed';
 import { ProjectsPage } from './pages/Projects';
 import { ProfilePage } from './pages/Profile';
-import { SettingsPage } from './pages/SettingsPage';
+import { SettingsPage } from './pages/Settings';
 import { WorksPage } from './pages/Works';
 import { ProjectDetailsPage } from './pages/ProjectDetails';
 import { WorkDetails } from './pages/WorksDetails';
