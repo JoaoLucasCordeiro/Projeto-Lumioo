@@ -1,4 +1,4 @@
-import { clearAuthData, getToken, getUser, saveAuthData } from '@/services/auth.service';
+import { clearAuthData, getToken, getUser, saveAuthData, updateLocalUser } from '@/services/auth.service';
 import { createContext, useState, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ interface User {
   id: string;
   username: string;
   fullName: string;
+  avatar: string | null;
 }
 
 interface AuthContextType {
@@ -16,6 +17,7 @@ interface AuthContextType {
   token: string | null;
   login: (identifier: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUserContext: (newUserData: Partial<User>) => void; 
   isLoading: boolean;
   error: string | null;
 }
@@ -73,7 +75,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate('/login'); 
   };
 
-  const value = { user, token, login, logout, isLoading, error };
+  const updateUserContext = (newUserData: Partial<User>) => {
+    const updatedUser = updateLocalUser(newUserData);
+    if (updatedUser) {
+        setUser(updatedUser);
+    }
+  };
+
+  const value = { user, token, login, logout, updateUserContext, isLoading, error };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

@@ -2,6 +2,7 @@ interface UserData {
   id: string;
   username: string;
   fullName: string;
+  avatar: string | null;
 }
 
 const USER_KEY = 'lumioo_user';
@@ -27,6 +28,16 @@ export const getUser = (): UserData | null => {
   try {
     return JSON.parse(userStr);
   } catch (error) {
+    console.error("Failed to parse user data from localStorage", error);
     return null;
   }
 };
+
+export const updateLocalUser = (newUserData: Partial<UserData>): UserData | null => {
+    const currentUser = getUser();
+    if (!currentUser) return null;
+
+    const updatedUser = { ...currentUser, ...newUserData };
+    localStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+    return updatedUser;
+}
