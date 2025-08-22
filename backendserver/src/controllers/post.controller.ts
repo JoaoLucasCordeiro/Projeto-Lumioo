@@ -3,11 +3,9 @@ import { Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
+// A interface AuthenticatedRequest foi removida
 
-export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => {
+export const getFeedPosts = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   if (!userId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -23,7 +21,6 @@ export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => 
       cursor: cursor ? { id: cursor as string } : undefined,
       orderBy: { createdAt: 'desc' },
       include: {
-        // CORREÇÃO AQUI: Agora também seleciona o avatar do autor
         author: { select: { username: true, avatar: true } },
         likes: { select: { userId: true } },
         _count: { select: { comments: true } },
@@ -35,7 +32,7 @@ export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => 
       id: post.id,
       username: post.author.username,
       authorId: post.authorId, 
-      userImage: post.author.avatar, // <-- USA O AVATAR DO AUTOR
+      userImage: post.author.avatar,
       image: post.image,
       caption: post.caption,
       likes: post.likes.length,
@@ -55,7 +52,7 @@ export const getFeedPosts = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
-export const createPost = async (req: AuthenticatedRequest, res: Response) => {
+export const createPost = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -81,7 +78,7 @@ export const createPost = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
+export const getAllPosts = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   const { search } = req.query;
 
@@ -98,7 +95,6 @@ export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
-        // CORREÇÃO AQUI: Garante que o avatar do autor seja buscado
         author: { select: { username: true, avatar: true } },
         likes: { select: { userId: true } },
         _count: { select: { comments: true } },
@@ -110,7 +106,7 @@ export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
       id: post.id,
       username: post.author.username,
       authorId: post.authorId,
-      userImage: post.author.avatar, // <-- USA O AVATAR CORRETO DO AUTOR
+      userImage: post.author.avatar,
       image: post.image,
       caption: post.caption,
       likes: post.likes.length,
@@ -128,7 +124,7 @@ export const getAllPosts = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
+export const getPostById = async (req: Request, res: Response) => {
   const userId = req.user?.userId; 
   const { id } = req.params;
 
@@ -136,14 +132,13 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
     const post = await prisma.post.findUnique({
       where: { id },
       include: {
-        // CORREÇÃO AQUI: Garante que o avatar do autor do post seja buscado
         author: { select: { username: true, avatar: true } },
         likes: { select: { userId: true } },
         savedBy: { where: { userId }, select: { userId: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
           include: {
-            author: { select: { username: true, avatar: true } }, // E também o avatar de quem comentou
+            author: { select: { username: true, avatar: true } },
             likes: { select: { userId: true } },
           },
         },
@@ -158,7 +153,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
       id: post.id,
       username: post.author.username,
       authorId: post.authorId,
-      userImage: post.author.avatar, // <-- USA O AVATAR CORRETO DO AUTOR
+      userImage: post.author.avatar,
       image: post.image,
       caption: post.caption,
       likes: post.likes.length,
@@ -169,7 +164,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
         id: comment.id,
         username: comment.author.username,
         authorId: comment.authorId, 
-        userImage: comment.author.avatar, // <-- USA O AVATAR CORRETO DE QUEM COMENTOU
+        userImage: comment.author.avatar,
         text: comment.text,
         timePosted: comment.createdAt.toISOString(),
         likes: comment.likes.length,
@@ -184,7 +179,7 @@ export const getPostById = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const updatePost = async (req: AuthenticatedRequest, res: Response) => {
+export const updatePost = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -210,7 +205,7 @@ export const updatePost = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const deletePost = async (req: AuthenticatedRequest, res: Response) => {
+export const deletePost = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
@@ -226,7 +221,6 @@ export const deletePost = async (req: AuthenticatedRequest, res: Response) => {
       return res.status(403).json({ error: 'You are not authorized to delete this post.' });
     }
 
-    // Agora, só precisamos deletar o post. O Prisma e o DB farão o resto.
     await prisma.post.delete({ where: { id } });
     
     res.status(204).send();

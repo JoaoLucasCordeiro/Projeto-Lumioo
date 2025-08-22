@@ -3,11 +3,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
+// A interface AuthenticatedRequest foi removida daqui
 
-export const togglePostLike = async (req: AuthenticatedRequest, res: Response) => {
+export const togglePostLike = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { postId } = req.params;
 
@@ -33,7 +31,7 @@ export const togglePostLike = async (req: AuthenticatedRequest, res: Response) =
 };
 
 
-export const toggleCommentLike = async (req: AuthenticatedRequest, res: Response) => {
+export const toggleCommentLike = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { commentId } = req.params;
 
@@ -59,4 +57,3 @@ export const toggleCommentLike = async (req: AuthenticatedRequest, res: Response
         res.status(500).json({ error: 'Could not process comment like action.' });
     }
 };
-

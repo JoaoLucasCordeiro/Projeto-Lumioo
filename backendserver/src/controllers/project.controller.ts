@@ -3,17 +3,9 @@ import { Prisma, PrismaClient, ProjectStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
+// As interfaces AuthenticatedRequest e TeamMemberInput foram removidas
 
-interface TeamMemberInput {
-  name: string;
-  role: string;
-  photo?: string | null;
-}
-
-export const createProject = async (req: AuthenticatedRequest, res: Response) => {
+export const createProject = async (req: Request, res: Response) => {
   const ownerId = req.user?.userId;
   if (!ownerId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -58,7 +50,7 @@ export const createProject = async (req: AuthenticatedRequest, res: Response) =>
         contactPhone,
         ownerId,
         teamMembers: {
-          create: teamMembers.map((member: TeamMemberInput) => ({
+          create: teamMembers.map((member: { name: string; role: string; photo?: string | null }) => ({
             name: member.name,
             role: member.role,
             photo: member.photo,
@@ -161,7 +153,7 @@ export const getProjectById = async (req: Request, res: Response) => {
       members: project.teamMembers.length,
       institution: project.owner.fullName, 
       status: project.status,
-      team: project.teamMembers.map(member => ({
+      team: project.teamMembers.map((member: { name: string; role: string; photo: string | null }) => ({
         name: member.name,
         role: member.role,
         photo: member.photo,
@@ -177,7 +169,7 @@ export const getProjectById = async (req: Request, res: Response) => {
   }
 };
 
-export const updateProject = async (req: AuthenticatedRequest, res: Response) => {
+export const updateProject = async (req: Request, res: Response) => {
   const ownerId = req.user?.userId;
   if (!ownerId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -190,7 +182,6 @@ export const updateProject = async (req: AuthenticatedRequest, res: Response) =>
     status,
     contactEmail,
     contactPhone,
-    teamMembers,
   } = req.body;
   try {
     const project = await prisma.project.findUnique({ where: { id } });
@@ -206,7 +197,7 @@ export const updateProject = async (req: AuthenticatedRequest, res: Response) =>
         title,
         description,
         image,
-        status: status ? status.toUpperCase() : undefined,
+        status: status ? (status.toUpperCase() as ProjectStatus) : undefined,
         contactEmail,
         contactPhone,
       },
@@ -219,7 +210,7 @@ export const updateProject = async (req: AuthenticatedRequest, res: Response) =>
   }
 };
 
-export const deleteProject = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteProject = async (req: Request, res: Response) => {
   const ownerId = req.user?.userId;
   if (!ownerId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -238,7 +229,6 @@ export const deleteProject = async (req: AuthenticatedRequest, res: Response) =>
 
     await prisma.$transaction([
       prisma.teamMember.deleteMany({ where: { projectId: id } }),
-    
       prisma.project.delete({ where: { id } }),
     ]);
 

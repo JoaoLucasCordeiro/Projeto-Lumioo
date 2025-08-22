@@ -4,11 +4,7 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
-
-// ... (suas funções createUser, getAllUsers, getUserById, getMyProfile)
+// A interface AuthenticatedRequest foi removida
 
 export const createUser = async (req: Request, res: Response) => {
   try {
@@ -72,7 +68,7 @@ export const getUserById = async (req: Request, res: Response) => {
   }
 };
 
-export const getMyProfile = async (req: AuthenticatedRequest, res: Response) => {
+export const getMyProfile = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   if (!userId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -140,7 +136,7 @@ export const getMyProfile = async (req: AuthenticatedRequest, res: Response) => 
       followers: 0,
       following: 0,
       posts: userProfile._count.posts,
-      userPosts: userProfile.posts.map(post => ({
+      userPosts: userProfile.posts.map((post: any) => ({
         id: post.id,
         username: post.author.username,
         authorId: post.authorId,
@@ -150,10 +146,10 @@ export const getMyProfile = async (req: AuthenticatedRequest, res: Response) => 
         likes: post.likes.length,
         comments: post._count.comments,
         timePosted: post.createdAt.toISOString(),
-        isLiked: post.likes.some(like => like.userId === userId),
+        isLiked: post.likes.some((like: { userId: string }) => like.userId === userId),
         isSaved: post.savedBy.length > 0,
       })),
-      savedPosts: userProfile.savedPosts.map(saved => ({
+      savedPosts: userProfile.savedPosts.map((saved: any) => ({
         id: saved.post.id,
         username: saved.post.author.username,
         authorId: saved.post.authorId,
@@ -163,7 +159,7 @@ export const getMyProfile = async (req: AuthenticatedRequest, res: Response) => 
         likes: saved.post.likes.length,
         comments: saved.post._count.comments,
         timePosted: saved.post.createdAt.toISOString(),
-        isLiked: saved.post.likes.some(like => like.userId === userId),
+        isLiked: saved.post.likes.some((like: { userId: string }) => like.userId === userId),
         isSaved: true,
       }))
     };
@@ -176,10 +172,10 @@ export const getMyProfile = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
-export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
-  // Pega o ID diretamente do token. Mais seguro!
-  const userId = req.user?.userId;
-  if (!userId) {
+export const updateUser = async (req: Request, res: Response) => {
+  const tokenUserId = req.user?.userId;
+
+  if (!tokenUserId) {
     return res.status(403).json({ error: 'User not authenticated.' });
   }
 
@@ -187,31 +183,24 @@ export const updateUser = async (req: AuthenticatedRequest, res: Response) => {
 
   try {
     if (username) {
-        const existingUser = await prisma.user.findUnique({ where: { username } });
-        if (existingUser && existingUser.id !== userId) {
-            return res.status(409).json({ error: 'Username already taken.' });
-        }
+      const existingUser = await prisma.user.findUnique({ where: { username } });
+      if (existingUser && existingUser.id !== tokenUserId) {
+        return res.status(409).json({ error: 'Username already taken.' });
+      }
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: userId }, // Usa o ID do token para a atualização
-      data: {
-        fullName,
-        username,
-        bio,
-        avatar,
-        coverPhoto,
-      },
+      where: { id: tokenUserId },
+      data: { fullName, username, bio, avatar, coverPhoto }
     });
 
     const { password, ...userWithoutPassword } = updatedUser;
-    res.status(200).json(userWithoutPassword);
+    return res.status(200).json(userWithoutPassword);
   } catch (error) {
     console.error('Error updating user:', error);
-    res.status(500).json({ error: 'An error occurred while updating the user.' });
+    return res.status(500).json({ error: 'An error occurred while updating the user.' });
   }
 };
-
 
 
 export const deleteUser = async (req: Request, res: Response) => {
@@ -231,7 +220,7 @@ export const deleteUser = async (req: Request, res: Response) => {
   }
 };
 
-export const changePassword = async (req: AuthenticatedRequest, res: Response) => {
+export const changePassword = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   if (!userId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -249,16 +238,13 @@ export const changePassword = async (req: AuthenticatedRequest, res: Response) =
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
-    // Verifica se a senha atual está correta
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'A senha atual está incorreta.' });
     }
 
-    // Criptografa a nova senha
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-    // Atualiza a senha no banco de dados
     await prisma.user.update({
       where: { id: userId },
       data: { password: hashedNewPassword },

@@ -3,11 +3,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
+// A interface AuthenticatedRequest foi removida daqui
 
-export const createComment = async (req: AuthenticatedRequest, res: Response) => {
+export const createComment = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
   const { postId } = req.params;
   const { text } = req.body;
@@ -61,7 +59,7 @@ export const getCommentsForPost = async (req: Request, res: Response) => {
 };
 
 
-export const updateComment = async (req: AuthenticatedRequest, res: Response) => {
+export const updateComment = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { commentId } = req.params;
     const { text } = req.body;
@@ -99,7 +97,7 @@ export const updateComment = async (req: AuthenticatedRequest, res: Response) =>
 };
 
 
-export const deleteComment = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteComment = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { commentId } = req.params;
 

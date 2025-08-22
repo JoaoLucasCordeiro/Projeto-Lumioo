@@ -1,14 +1,11 @@
-// src/controllers/work.controller.ts
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, WorkType } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
+// A interface AuthenticatedRequest foi removida
 
-export const createWork = async (req: AuthenticatedRequest, res: Response) => {
+export const createWork = async (req: Request, res: Response) => {
   const authorId = req.user?.userId;
   if (!authorId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -59,7 +56,7 @@ export const createWork = async (req: AuthenticatedRequest, res: Response) => {
         department,
         pdfFile,
         authorId,
-        downloads: 0, // Inicia com 0 downloads
+        downloads: 0,
       },
     });
 
@@ -117,7 +114,7 @@ export const getAllWorks = async (req: Request, res: Response) => {
       }
     });
 
-    const formattedWorks = worksFromDb.map(work => ({
+    const formattedWorks = worksFromDb.map((work: any) => ({
         id: work.id,
         title: work.title,
         author: work.author.fullName,
@@ -185,7 +182,7 @@ export const downloadWorkById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
 
-        const work = await prisma.$transaction(async (tx) => {
+        const work = await prisma.$transaction(async (tx: any) => {
             const updatedWork = await tx.work.update({
                 where: { id },
                 data: {
@@ -209,7 +206,7 @@ export const downloadWorkById = async (req: Request, res: Response) => {
     }
 };
 
-export const updateWork = async (req: AuthenticatedRequest, res: Response) => {
+export const updateWork = async (req: Request, res: Response) => {
   const authorId = req.user?.userId;
   if (!authorId) {
     return res.status(403).json({ error: 'User not authenticated.' });
@@ -240,7 +237,7 @@ export const updateWork = async (req: AuthenticatedRequest, res: Response) => {
       where: { id },
       data: {
         title,
-        workType: workType ? workType.toUpperCase() : undefined,
+        workType: workType ? (workType.toUpperCase() as WorkType) : undefined,
         coverImage,
         summary,
         description,
@@ -259,7 +256,7 @@ export const updateWork = async (req: AuthenticatedRequest, res: Response) => {
   }
 };
 
-export const deleteWork = async (req: AuthenticatedRequest, res: Response) => {
+export const deleteWork = async (req: Request, res: Response) => {
   const authorId = req.user?.userId;
   if (!authorId) {
     return res.status(403).json({ error: 'User not authenticated.' });

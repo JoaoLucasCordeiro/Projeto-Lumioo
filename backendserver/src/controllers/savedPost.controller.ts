@@ -3,11 +3,9 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-interface AuthenticatedRequest extends Request {
-  user?: { userId: string };
-}
+// A interface AuthenticatedRequest foi removida
 
-export const toggleSavePost = async (req: AuthenticatedRequest, res: Response) => {
+export const toggleSavePost = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { postId } = req.params;
 

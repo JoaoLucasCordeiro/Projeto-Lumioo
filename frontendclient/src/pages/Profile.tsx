@@ -87,8 +87,6 @@ export function ProfilePage() {
         const updatedUserData = await response.json();
         if (!response.ok) throw new Error("Falha ao salvar alterações");
 
-        // --- A LINHA QUE FALTAVA ---
-        // Atualiza o contexto global com os novos dados do usuário
         updateUserContext(updatedUserData);
 
         setIsEditing(false);
