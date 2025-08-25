@@ -103,7 +103,7 @@ export function ProfileHeader({ userData, isOwner, isEditing, onEditToggle, onDa
                 <div className="flex gap-3">
                   {isEditing ? (
                     <>
-                      <Button variant="outline" className="border-slate-600 text-slate-300 hover:bg-slate-700" onClick={onEditToggle}>Cancelar</Button>
+                      <Button variant="outline" className="bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-200" onClick={onEditToggle}>Cancelar</Button>
                       <Button className="bg-red-600 hover:bg-red-700" onClick={onSaveChanges}>Salvar Alterações</Button>
                     </>
                   ) : (
@@ -128,7 +128,7 @@ export function ProfileHeader({ userData, isOwner, isEditing, onEditToggle, onDa
               <p className="text-slate-300">{userData.bio}</p>
             )}
 
-            <ProfileStats posts={userData.posts || 0} followers={userData.followers || 0} following={userData.following || 0} />
+            <ProfileStats posts={userData.posts || 0}  />
           </div>
         </div>
       </div>

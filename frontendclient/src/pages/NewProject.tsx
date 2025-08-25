@@ -225,7 +225,7 @@ export function NewProjectPage() {
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-semibold text-slate-100">Equipe do Projeto</h3>
-                <Button type="button" variant="outline" size="sm" onClick={addTeamMember} className="border-slate-700 text-slate-300 hover:bg-slate-700/50"><Plus className="h-4 w-4 mr-2" />Adicionar membro</Button>
+                <Button type="button" variant="outline" size="sm" onClick={addTeamMember} className="bg-red-600 text-white hover:bg-red-700 hover:text-white border-none"><Plus className="h-4 w-4 mr-2" />Adicionar membro</Button>
               </div>
               <div className="space-y-6">
                 {teamMembers.map((member) => (

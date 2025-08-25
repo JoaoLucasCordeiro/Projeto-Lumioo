@@ -150,7 +150,7 @@ export function ProjectCard({
             <Button 
               variant="outline" 
               size="sm" 
-              className="border-red-500/50 text-red-400 hover:bg-red-900/20"
+               className="bg-red-600 text-white hover:text-white  hover:bg-red-700 border-none" 
               onClick={(e) => {
                 e.stopPropagation();
                 navigate(`/projetos/${id}`);

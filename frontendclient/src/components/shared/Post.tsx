@@ -251,7 +251,7 @@ export function Post({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent text-slate-300 border-slate-600 hover:bg-slate-700">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-200">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeletePost} className="bg-red-600 hover:bg-red-700 text-white">Deletar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

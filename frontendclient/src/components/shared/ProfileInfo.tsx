@@ -1,6 +1,4 @@
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Mail, GraduationCap, Calendar } from "lucide-react";
 
 interface ProfileInfoProps {
@@ -111,39 +109,7 @@ export function ProfileInfo({ userData, isEditing }: ProfileInfoProps) {
           </div>
         </div>
 
-        {/* Áreas de pesquisa */}
-        <div className="mb-8">
-          <h2 className="text-xl font-bold text-slate-100 mb-4">Áreas de Pesquisa</h2>
-          <div className="flex flex-wrap gap-2">
-            {isEditing ? (
-              <>
-                <Input
-                  type="text"
-                  placeholder="Adicione uma área de pesquisa"
-                  className="bg-slate-800 border-slate-700 text-slate-200 max-w-xs"
-                />
-                <Button variant="outline" className="border-red-500 text-red-400 hover:bg-red-900/20">
-                  Adicionar
-                </Button>
-              </>
-            ) : (
-              <>
-                <Badge className="bg-slate-800 text-red-400 border-red-500/30 hover:bg-slate-700">
-                  Inteligência Artificial
-                </Badge>
-                <Badge className="bg-slate-800 text-red-400 border-red-500/30 hover:bg-slate-700">
-                  Saúde Digital
-                </Badge>
-                <Badge className="bg-slate-800 text-red-400 border-red-500/30 hover:bg-slate-700">
-                  Aprendizado de Máquina
-                </Badge>
-                <Badge className="bg-slate-800 text-red-400 border-red-500/30 hover:bg-slate-700">
-                  Diagnóstico Médico
-                </Badge>
-              </>
-            )}
-          </div>
-        </div>
+        
       </div>
     </div>
   );

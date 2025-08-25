@@ -63,7 +63,7 @@ export function SettingsPage() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Falha ao alterar a senha.");
-      
+
       showToast("Senha alterada com sucesso!");
       setPasswordData({ currentPassword: '', newPassword: '' });
     } catch (error: any) {
@@ -104,7 +104,7 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword" className="text-slate-300">Senha atual</Label>
                   <div className="relative">
-                    <Input id="currentPassword" type={showCurrentPassword ? "text" : "password"} placeholder="Digite sua senha atual" value={passwordData.currentPassword} onChange={(e) => setPasswordData(p => ({...p, currentPassword: e.target.value}))} className="bg-slate-800 border-slate-700 text-slate-200 pr-10" />
+                    <Input id="currentPassword" type={showCurrentPassword ? "text" : "password"} placeholder="Digite sua senha atual" value={passwordData.currentPassword} onChange={(e) => setPasswordData(p => ({ ...p, currentPassword: e.target.value }))} className="bg-slate-800 border-slate-700 text-slate-200 pr-10" />
                     <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
                       {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -113,7 +113,7 @@ export function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="newPassword" className="text-slate-300">Nova senha</Label>
                   <div className="relative">
-                    <Input id="newPassword" type={showNewPassword ? "text" : "password"} placeholder="Digite sua nova senha" value={passwordData.newPassword} onChange={(e) => setPasswordData(p => ({...p, newPassword: e.target.value}))} className="bg-slate-800 border-slate-700 text-slate-200 pr-10" />
+                    <Input id="newPassword" type={showNewPassword ? "text" : "password"} placeholder="Digite sua nova senha" value={passwordData.newPassword} onChange={(e) => setPasswordData(p => ({ ...p, newPassword: e.target.value }))} className="bg-slate-800 border-slate-700 text-slate-200 pr-10" />
                     <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-200" onClick={() => setShowNewPassword(!showNewPassword)}>
                       {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
@@ -165,7 +165,14 @@ export function SettingsPage() {
               <div className="flex items-center space-x-3 mb-6"><LogOut className="h-5 w-5 text-red-400" /><h2 className="text-xl font-bold text-slate-100">Sair</h2></div>
               <div className="space-y-4">
                 <p className="text-slate-400">Deseja sair da sua conta?</p>
-                <Button onClick={() => setIsLogoutDialogOpen(true)} variant="outline" className="w-full border-red-500 text-red-400 hover:bg-red-900/20"><LogOut className="h-4 w-4 mr-2" />Sair da conta</Button>
+                <Button
+                  onClick={() => setIsLogoutDialogOpen(true)}
+                  variant="outline"
+                  className="w-full bg-red-600 hover:bg-red-700 border-none hover:text-white  text-white font-semibold" 
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair da conta
+                </Button>
               </div>
             </div>
           </div>
@@ -177,7 +184,7 @@ export function SettingsPage() {
         <AlertDialogContent className="bg-slate-800 border-slate-700 text-slate-200">
           <AlertDialogHeader><AlertDialogTitle className="text-slate-100">Tem certeza que deseja sair?</AlertDialogTitle><AlertDialogDescription>Você será desconectado da sua conta.</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-200">Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={logout} className="bg-red-600 hover:bg-red-700">Sair</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

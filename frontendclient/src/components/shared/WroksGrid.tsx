@@ -1,4 +1,3 @@
-// src/components/shared/WroksGrid.tsx
 import { motion } from "framer-motion";
 import { WorkCard } from "./WorksCard";
 
@@ -15,12 +14,12 @@ interface WorksGridProps {
     fileUrl: string;
     image: string;
   }>;
-  onUpdate: () => void; // <-- Adicionado
+  onUpdate: () => void; 
 }
 
 export function WorksGrid({ works, onUpdate }: WorksGridProps) {
   if (works.length === 0) {
-    return null; // A mensagem de "nenhum trabalho" já é tratada na página principal
+    return null; 
   }
 
   return (
@@ -32,7 +31,7 @@ export function WorksGrid({ works, onUpdate }: WorksGridProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: index * 0.1 }}
         >
-          <WorkCard work={work} onUpdate={onUpdate} /> {/* <-- Passando a prop */}
+          <WorkCard work={work} onUpdate={onUpdate} /> 
         </motion.div>
       ))}
     </div>

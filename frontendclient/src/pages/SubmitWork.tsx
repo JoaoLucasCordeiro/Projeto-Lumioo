@@ -226,7 +226,7 @@ export function SubmitWorkPage() {
                     <Input type="text" value={newKeyword} onChange={(e) => setNewKeyword(e.target.value)} placeholder="Adicionar palavra-chave" className="bg-slate-800/30 border-slate-700 text-slate-100 pl-9" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddKeyword(); }}} />
                     <div className="absolute left-3 top-3"><Hash className="h-4 w-4 text-slate-400" /></div>
                   </div>
-                  <Button type="button" variant="outline" onClick={handleAddKeyword} disabled={!newKeyword.trim()} className="border-slate-700 text-slate-300 hover:bg-slate-700/50">Adicionar</Button>
+                  <Button type="button" variant="outline" onClick={handleAddKeyword} disabled={!newKeyword.trim()}  className="bg-red-600 text-white hover:bg-red-700 hover:text-white border-none" >Adicionar</Button>
                 </div>
               </div>
               <div>

@@ -161,7 +161,7 @@ export function WorkDetails() {
                     <div className="flex items-center space-x-1"><Users className="h-4 w-4" /><span>{work.downloads.toLocaleString()} downloads</span></div>
                   </div>
                 </div>
-                <Button size="lg" className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300" onClick={handleDownload}>
+                <Button size="lg" className="bg-green-600 text-white hover:text-white hover:bg-green-700 border-none" onClick={handleDownload}>
                   <Download className="h-5 w-5 mr-2" />
                   Baixar Trabalho
                 </Button>

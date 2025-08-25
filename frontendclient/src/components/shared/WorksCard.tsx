@@ -1,7 +1,7 @@
 import { Download, MoreHorizontal, Flag, Edit, Trash2, Bookmark, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card"; 
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
@@ -164,9 +164,15 @@ export function WorkCard({ work, onUpdate }: WorkCardProps) {
             <Download className="h-4 w-4 mr-1" />
             {work.downloads.toLocaleString()}
           </span>
-          <Button variant="outline" size="sm" className="border-red-500/50 text-red-400 hover:bg-red-900/20" onClick={handleDownload}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-green-600 text-white hover:text-white hover:bg-green-700 border-none"
+            onClick={handleDownload}
+          >
             Baixar
           </Button>
+
         </CardFooter>
       </Card>
 
