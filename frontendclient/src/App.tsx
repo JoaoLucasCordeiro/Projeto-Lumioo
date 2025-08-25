@@ -35,7 +35,6 @@ const App = () => {
       <Route path="/projetos" element={<ProjectsPage />} />
       <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
       <Route path="/novo-post" element={<NewPostPage />} />
-
     </Routes>
   );
 }
