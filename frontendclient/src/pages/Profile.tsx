@@ -29,7 +29,7 @@ interface UserProfileData {
 }
 
 export function ProfilePage() {
-  const { username } = useParams<{ username?: string }>(); // Pega o username da URL, se existir
+  const { username } = useParams<{ username?: string }>(); 
   const { user, token, updateUserContext } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -38,11 +38,9 @@ export function ProfilePage() {
   const [editableData, setEditableData] = useState<Partial<UserProfileData>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  // Verifica se o usuário logado é o dono do perfil que está sendo visto
   const isOwner = !username || user?.username === username;
 
   const fetchProfile = useCallback(async () => {
-    // Define a URL baseada em quem estamos visitando
     const endpoint = username ? `/profile/${username}` : '/profile';
     const url = `${API_URL}${endpoint}`;
 
