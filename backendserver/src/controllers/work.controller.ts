@@ -143,6 +143,7 @@ export const getWorkById = async (req: Request, res: Response) => {
         author: {
           select: {
             fullName: true,
+            username: true, 
           }
         }
       }
@@ -156,6 +157,7 @@ export const getWorkById = async (req: Request, res: Response) => {
         id: work.id,
         title: work.title,
         author: work.author.fullName,
+        authorUsername: work.author.username, 
         type: work.workType,
         area: work.institution,
         year: new Date(work.createdAt).getFullYear().toString(),
@@ -177,6 +179,7 @@ export const getWorkById = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'An error occurred while fetching the work.' });
   }
 };
+
 
 export const downloadWorkById = async (req: Request, res: Response) => {
     try {
