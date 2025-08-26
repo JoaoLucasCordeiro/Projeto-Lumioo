@@ -1,107 +1,177 @@
-# Autenticação no VigiaLab
+# Documentação do Auth Controller
 
-O sistema de autenticação do VigiaLab é baseado em tokens JWT (JSON Web Token), garantindo segurança, escalabilidade e facilidade de integração entre front-end e back-end.
+Arquivo fonte: `backendserver/src/controllers/auth.controller.ts`  
+Responsável por autenticação de usuários (login) e emissão de token JWT.
 
----
+## Visão geral
 
-## 🔐 Fluxo de Autenticação
+O controller expõe a função `signIn`, que:
+- Valida credenciais enviadas pelo cliente (identificador e senha).
+- Permite autenticar por e-mail acadêmico (`academicEmail`) ou `username`.
+- Compara a senha informada com o hash armazenado (bcrypt).
+- Emite um token JWT com expiração de 1 dia.
+- Retorna os dados do usuário (sem o campo `password`) e o token.
 
-1. **Cadastro (`/register`)**
-   - O usuário envia nome, email, senha, e demais dados.
-   - A senha é **hashada com bcrypt** antes de ser salva no banco de dados.
-   - Após cadastro, o usuário pode fazer login.
+Observação: a rota HTTP associada a este controller pode variar conforme o arquivo de rotas da aplicação. Uma convenção comum é `POST /auth/sign-in`.
 
-2. **Login (`/login`)**
-   - O usuário envia email e senha.
-   - O servidor verifica as credenciais e, se corretas, gera um token JWT assinado.
-   - O token é retornado para o cliente e deve ser armazenado no `localStorage` ou `cookies`.
+## Dependências
 
-3. **Token JWT**
-   - O token contém o `id` do usuário e expira após um tempo configurado (ex: 1h).
-   - Exemplo de payload:
-     ```json
-     {
-       "id": "abc123",
-       "exp": 1701234567
-     }
-     ```
+- `express` (tipos `Request`, `Response`)
+- `@prisma/client` (acesso ao banco via Prisma)
+- `bcryptjs` (verificação de hash de senha)
+- `jsonwebtoken` (geração de token JWT)
 
-4. **Autorização**
-   - Rotas protegidas usam um middleware que verifica a presença e validade do token.
-   - Se o token for inválido ou ausente, o acesso é negado.
+## Variáveis de ambiente
 
----
+- `JWT_SECRET` (obrigatória): segredo utilizado para assinar o JWT.
 
-## 🔧 Detalhes Técnicos
+Sem essa variável configurada, a geração do token falhará.
 
-### 🔑 Geração do Token
+## Entrada (Request)
 
-```ts
-import jwt from 'jsonwebtoken'
+- Método: `POST`
+- Cabeçalhos recomendados: `Content-Type: application/json`
+- Corpo (JSON):
+  - `identifier` (string, obrigatório): pode ser o `academicEmail` OU o `username`.
+  - `password` (string, obrigatório): senha em texto puro para validação.
 
-const token = jwt.sign(
-  { id: user.id },
-  process.env.JWT_SECRET!,
-  { expiresIn: '1h' }
-)
-```
-
-### 🧂 Hash da Senha
-
-```ts
-import bcrypt from 'bcrypt'
-
-const hashedPassword = await bcrypt.hash(password, 10)
-```
-
-### 🔍 Verificação de Senha
-
-```ts
-const isMatch = await bcrypt.compare(password, user.password)
-```
-
-### 🛡️ Middleware de Autenticação
-
-```ts
-import jwt from 'jsonwebtoken'
-
-export function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
-  if (!token) return res.sendStatus(401)
-
-  jwt.verify(token, process.env.JWT_SECRET!, (err, user) => {
-    if (err) return res.sendStatus(403)
-    req.user = user
-    next()
-  })
+Exemplo:
+```json
+{
+  "identifier": "joao.silva", 
+  "password": "minhaSenhaSegura!"
 }
 ```
 
----
+ou
 
-## 🧪 Exemplo de uso no back-end
-
-```ts
-app.get('/me', authenticateToken, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user.id } })
-  res.json(user)
-})
+```json
+{
+  "identifier": "joao.silva@universidade.edu.br",
+  "password": "minhaSenhaSegura!"
+}
 ```
 
----
+## Comportamento e Lógica
 
-## 🧰 Bibliotecas utilizadas
+1. Validação inicial: se `identifier` ou `password` estiverem ausentes, retorna `400`.
+2. Busca do usuário via Prisma:
+   - `findFirst` com condição `OR` entre `academicEmail == identifier` e `username == identifier`.
+3. Caso o usuário não exista, retorna `401` (credenciais inválidas).
+4. Validação de senha:
+   - `bcrypt.compare(password, user.password)`.
+   - Se inválida, retorna `401` (credenciais inválidas).
+5. Geração do token JWT:
+   - Payload: `{ userId: user.id, username: user.username }`.
+   - Segredo: `process.env.JWT_SECRET`.
+   - Expiração: `1d`.
+6. Retorno de sucesso:
+   - Status `200`.
+   - JSON com `{ user: <dadosSemPassword>, token }`.
+   - O campo `password` é removido do objeto `user` antes de enviar a resposta.
 
-- `jsonwebtoken`: para geração e verificação de tokens.
-- `bcrypt`: para hash seguro de senhas.
-- `dotenv`: para gerenciar variáveis de ambiente (`JWT_SECRET`, etc).
+## Saída (Response)
 
----
+- Sucesso (200):
+  ```json
+  {
+    "user": {
+      "id": 123,
+      "username": "joao.silva",
+      "academicEmail": "joao.silva@universidade.edu.br",
+      "...": "demais campos do usuário, exceto password"
+    },
+    "token": "jwt.assinado.aqui"
+  }
+  ```
 
-## 📌 Observações
+- Erros:
+  - 400 Bad Request:
+    ```json
+    { "error": "Email/username and password are required." }
+    ```
+  - 401 Unauthorized (credenciais inválidas):
+    ```json
+    { "error": "Invalid credentials." }
+    ```
+  - 500 Internal Server Error:
+    ```json
+    { "error": "An internal error occurred." }
+    ```
 
-- Sempre armazene senhas apenas **hashadas**.
-- Nunca inclua informações sensíveis no payload do JWT.
-- Considere usar **refresh tokens** para sessões mais longas.
-- Mantenha a `JWT_SECRET` segura no `.env` e nunca exponha no front-end.
+## Exemplo de uso (cURL)
+
+```bash
+curl -X POST http://localhost:3000/auth/sign-in \
+  -H "Content-Type: application/json" \
+  -d '{
+        "identifier": "joao.silva",
+        "password": "minhaSenhaSegura!"
+      }'
+```
+
+Resposta esperada (200):
+```json
+{
+  "user": {
+    "id": 123,
+    "username": "joao.silva",
+    "academicEmail": "joao.silva@universidade.edu.br"
+  },
+  "token": "jwt.assinado.aqui"
+}
+```
+
+## Estrutura do JWT
+
+- Payload:
+  - `userId`: ID do usuário autenticado.
+  - `username`: nome de usuário.
+- Expiração: 1 dia.
+- Assinatura: HMAC com segredo definido em `JWT_SECRET` (algoritmo padrão do `jsonwebtoken`, tipicamente HS256).
+
+Dica: APIs downstream podem validar este token para autorizar acesso a rotas protegidas.
+
+## Considerações de segurança
+
+- Garanta que `JWT_SECRET` seja forte, rotacionado periodicamente e não versionado.
+- Utilize HTTPS em produção para proteger credenciais e tokens em trânsito.
+- Armazene o token com segurança no cliente (evitar localStorage quando possível; considerar cookies HTTPOnly + SameSite se for aplicável ao fluxo).
+- Respostas de erro não diferenciam entre usuário inexistente e senha incorreta (bom para evitar enumeração de usuários).
+- Considere adicionar:
+  - Limitação de tentativas (rate limiting + lockout temporário).
+  - Auditoria de logins.
+  - 2FA/MFA.
+  - Refresh tokens + revogação de sessões (lista de bloqueio ou rotação).
+  - Normalização do `identifier` (e.g., lowercase/trim) conforme a modelagem de dados.
+
+## Integração com o Prisma
+
+A função consulta o modelo `user` com:
+- `academicEmail`
+- `username`
+- `password`
+- `id`
+
+Certifique-se de que o schema Prisma contenha esses campos e que `password` armazene um hash gerado com `bcrypt`.
+
+## Tratamento de erros e logs
+
+- Em caso de exceções, o controller loga no servidor: `console.error('Error during sign in:', error)` e responde `500`.
+- Em produção, prefira um logger estruturado (e.g., pino, winston) com níveis de log.
+
+## Possíveis melhorias
+
+- Padronizar respostas com um envelope de erro/sucesso.
+- Internacionalização (i18n) das mensagens de erro.
+- Configurar algoritmo JWT explicitamente e auditar claims.
+- Adicionar testes unitários e de integração:
+  - Mock do Prisma para cenários de usuário encontrado/não encontrado.
+  - Mock do `bcrypt.compare`.
+  - Verificação da remoção do campo `password`.
+  - Verificação do tempo de expiração do token.
+  - Casos para 400, 401 e 500.
+
+## Resumo
+
+O `signIn` implementa um fluxo de login sólido: aceita identificador flexível (email acadêmico ou username), valida senha com bcrypt, emite JWT com expiração e retorna os dados do usuário sem a senha. Para produção, recomenda-se fortalecer aspectos de segurança, observabilidade e testes.
