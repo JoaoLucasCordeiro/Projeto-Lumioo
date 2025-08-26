@@ -257,3 +257,75 @@ export const changePassword = async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Ocorreu um erro ao alterar a senha.' });
   }
 };
+
+export const getUserProfileByUsername = async (req: Request, res: Response) => {
+  const loggedInUserId = req.user?.userId; 
+  const { username } = req.params; 
+
+  try {
+    const userProfile = await prisma.user.findUnique({
+      where: { username },
+      select: {
+        id: true, 
+        fullName: true,
+        username: true,
+        institution: true,
+        academicLevel: true,
+        createdAt: true,
+        bio: true,
+        avatar: true,
+        coverPhoto: true,
+        _count: {
+          select: { posts: true }
+        },
+        posts: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            author: { select: { username: true, avatar: true } },
+            likes: { select: { userId: true } },
+            _count: { select: { comments: true } },
+            savedBy: { where: { userId: loggedInUserId }, select: { userId: true } },
+          }
+        },
+      }
+    });
+
+    if (!userProfile) {
+      return res.status(404).json({ error: 'Profile not found.' });
+    }
+
+    const formattedProfile = {
+      fullName: userProfile.fullName,
+      username: userProfile.username,
+      institution: userProfile.institution,
+      academicLevel: userProfile.academicLevel,
+      joinDate: userProfile.createdAt.toISOString(),
+      bio: userProfile.bio || '',
+      avatar: userProfile.avatar,
+      coverPhoto: userProfile.coverPhoto,
+      posts: userProfile._count.posts,
+      followers: 0, 
+      following: 0, 
+      userPosts: userProfile.posts.map((post: any) => ({
+        id: post.id,
+        username: post.author.username,
+        authorId: post.authorId,
+        userImage: post.author.avatar,
+        image: post.image,
+        caption: post.caption,
+        likes: post.likes.length,
+        comments: post._count.comments,
+        timePosted: post.createdAt.toISOString(),
+        isLiked: loggedInUserId ? post.likes.some((like: { userId: string }) => like.userId === loggedInUserId) : false,
+        isSaved: loggedInUserId ? post.savedBy.length > 0 : false,
+      })),
+      savedPosts: [] 
+    };
+
+    res.status(200).json(formattedProfile);
+
+  } catch (error) {
+    console.error("Error fetching public profile:", error);
+    res.status(500).json({ error: "Could not fetch profile." });
+  }
+};
