@@ -45,9 +45,13 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         </div>
       </Link>
 
-      <div className="flex items-center space-x-3 mb-8 p-3 rounded-lg bg-slate-800/50">
+      {/* --- CORREÇÃO AQUI: Bloco de usuário agora é um link --- */}
+      <Link 
+        to="/perfil" 
+        className="flex items-center space-x-3 mb-8 p-3 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
+        onClick={onNavigate}
+      >
         <Avatar className="h-10 w-10 border-2 border-red-500/30">
-          {/* --- CORREÇÃO AQUI --- */}
           <AvatarImage src={user?.avatar || undefined} alt={user?.fullName} />
           <AvatarFallback className="bg-slate-700 text-red-400 font-bold">
             {user?.fullName?.charAt(0).toUpperCase() || '?'}
@@ -57,7 +61,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
           <p className="font-medium text-slate-100">{user?.fullName || 'Usuário'}</p>
           <p className="text-xs text-slate-400">@{user?.username || 'username'}</p>
         </div>
-      </div>
+      </Link>
 
       <nav className="flex-1 space-y-2">
         {navItems.map((item) => (
