@@ -1,4 +1,4 @@
-import { Home, Bookmark, FileText, Folder, Settings, User, LogOut } from 'lucide-react';
+import { Home, Bookmark, FileText, Folder, Settings, User, LogOut, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -23,14 +23,15 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const { user, logout } = useAuth();
 
-  const navItems = [
-    { icon: <Home className="h-5 w-5" />, label: 'Feed', path: '/feed' },
-    { icon: <FileText className="h-5 w-5" />, label: 'Posts', path: '/posts' },
-    { icon: <Folder className="h-5 w-5" />, label: 'Trabalhos', path: '/trabalhos' },
-    { icon: <Bookmark className="h-5 w-5" />, label: 'Projetos', path: '/projetos' },
-    { icon: <User className="h-5 w-5" />, label: 'Perfil', path: '/perfil' },
-    { icon: <Settings className="h-5 w-5" />, label: 'Configurações', path: '/configuracoes' },
-  ];
+const navItems = [
+  { icon: <Home className="h-5 w-5" />, label: 'Feed', path: '/feed' },
+  { icon: <FileText className="h-5 w-5" />, label: 'Posts', path: '/posts' },
+  { icon: <Folder className="h-5 w-5" />, label: 'Trabalhos', path: '/trabalhos' },
+  { icon: <Bookmark className="h-5 w-5" />, label: 'Projetos', path: '/projetos' },
+  { icon: <MessageCircle className="h-5 w-5" />, label: 'Mensagens', path: '/mensagens' }, // Novo item
+  { icon: <User className="h-5 w-5" />, label: 'Perfil', path: '/perfil' },
+  { icon: <Settings className="h-5 w-5" />, label: 'Configurações', path: '/configuracoes' },
+];
 
   const handleLogout = () => {
     logout();
