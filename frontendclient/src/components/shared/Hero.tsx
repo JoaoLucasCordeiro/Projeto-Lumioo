@@ -1,6 +1,7 @@
 import { ArrowRight, BookOpen, GraduationCap } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "../ui/button";
+import { Link } from "react-router-dom";
 
 export default function Hero() {
   return (
@@ -54,23 +55,30 @@ export default function Hero() {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
             >
-              <Button className="bg-[#ff3131] hover:bg-red-600 text-white font-bold px-8 py-6 text-lg shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300">
-                Criar Conta Gratuita
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            <Button
-                variant="outline"
-                className="border-red-400 text-red-400 hover:bg-red-900/20 hover:text-red-300 font-medium px-8 py-6 text-lg transition-all"
-                asChild
-              >
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <Link to="/login">
+                <Button className="bg-[#ff3131] hover:bg-red-600 text-white font-bold px-8 py-6 text-lg shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300">
+                  Criar Conta Gratuita
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+
+
+              <Link to="explorar-projetos">
+                <Button
+                  variant="outline"
+                  className="border-red-400 text-red-400 hover:bg-red-900/20 hover:text-red-300 font-medium px-8 py-6 text-lg transition-all"
+                  asChild
                 >
-                  <BookOpen className="mr-2 h-5 w-5" />
-                  Explorar Pesquisas
-                </motion.button>
-              </Button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <BookOpen className="mr-2 h-5 w-5" />
+                    Explorar Projetos
+                  </motion.button>
+                </Button>
+              </Link>
+            
             </motion.div>
           </div>
         </div>
@@ -93,7 +101,7 @@ export default function Hero() {
                 alt="Lumioo Logo"
                 className="w-full max-w-[500px] md:max-w-[650px] lg:max-w-[800px] mx-auto mb-4 h-auto"
               />
-            
+
             </div>
           </motion.div>
         </div>
