@@ -174,34 +174,44 @@ export const getMyProfile = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   const tokenUserId = req.user?.userId;
+  const { id } = req.params;
 
   if (!tokenUserId) {
     return res.status(403).json({ error: 'User not authenticated.' });
+  }
+
+  if (tokenUserId !== id) {
+    return res.status(403).json({ error: 'Forbidden: You can only update your own profile.' });
   }
 
   const { fullName, username, bio, avatar, coverPhoto } = req.body;
 
   try {
     if (username) {
-      const existingUser = await prisma.user.findUnique({ where: { username } });
-      if (existingUser && existingUser.id !== tokenUserId) {
-        return res.status(409).json({ error: 'Username already taken.' });
-      }
+        const existingUser = await prisma.user.findUnique({ where: { username } });
+        if (existingUser && existingUser.id !== tokenUserId) {
+            return res.status(409).json({ error: 'Username already taken.' });
+        }
     }
 
     const updatedUser = await prisma.user.update({
       where: { id: tokenUserId },
-      data: { fullName, username, bio, avatar, coverPhoto }
+      data: {
+        fullName,
+        username,
+        bio,
+        avatar,
+        coverPhoto,
+      },
     });
 
     const { password, ...userWithoutPassword } = updatedUser;
-    return res.status(200).json(userWithoutPassword);
+    res.status(200).json(userWithoutPassword);
   } catch (error) {
     console.error('Error updating user:', error);
-    return res.status(500).json({ error: 'An error occurred while updating the user.' });
+    res.status(500).json({ error: 'An error occurred while updating the user.' });
   }
 };
-
 
 export const deleteUser = async (req: Request, res: Response) => {
   try {
@@ -295,6 +305,7 @@ export const getUserProfileByUsername = async (req: Request, res: Response) => {
     }
 
     const formattedProfile = {
+      id: userProfile.id,
       fullName: userProfile.fullName,
       username: userProfile.username,
       institution: userProfile.institution,
