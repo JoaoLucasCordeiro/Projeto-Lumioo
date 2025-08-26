@@ -35,8 +35,34 @@ model User {
   savedPosts SavedPost[] @relation("SavedByUsers") 
   projects   Project[]
   works      Work[]
+  conversations Conversation[] @relation("ConversationParticipants")
+  messages      Message[]      
 
   @@map("users")
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  participants User[]      @relation("ConversationParticipants")
+  messages     Message[] 
+
+  @@map("conversations")
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+
+  sender         User         @relation(fields: [senderId], references: [id])
+  senderId       String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+
+  @@map("messages")
 }
 
 model Post {
