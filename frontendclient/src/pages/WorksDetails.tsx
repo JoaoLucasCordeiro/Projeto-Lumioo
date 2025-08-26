@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom"; // Adicionado Link
 import { motion } from "framer-motion";
 import { Menu, Users, BookOpen, Calendar, Download, ArrowLeft} from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -13,6 +13,7 @@ interface WorkDetailsData {
   id: string;
   title: string;
   author: string;
+  authorUsername: string; 
   type: string;
   area: string;
   year: string;
@@ -154,7 +155,9 @@ export function WorkDetails() {
               <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-6">
                 <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-slate-100 mb-2">{work.title}</h1>
-                  <p className="text-lg text-slate-300 mb-4">{work.author}</p>
+                  <Link to={`/perfil/${work.authorUsername}`}>
+                    <p className="text-lg text-slate-300 mb-4 hover:text-red-400 transition-colors">{work.author}</p>
+                  </Link>
                   <div className="flex flex-wrap items-center gap-4 text-slate-400 mb-4">
                     <div className="flex items-center space-x-1"><Calendar className="h-4 w-4" /><span>{work.year}</span></div>
                     <div className="flex items-center space-x-1"><BookOpen className="h-4 w-4" /><span>{work.area}</span></div>
