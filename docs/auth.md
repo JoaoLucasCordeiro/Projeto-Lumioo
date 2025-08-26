@@ -130,21 +130,6 @@ Resposta esperada (200):
 - Expiração: 1 dia.
 - Assinatura: HMAC com segredo definido em `JWT_SECRET` (algoritmo padrão do `jsonwebtoken`, tipicamente HS256).
 
-Dica: APIs downstream podem validar este token para autorizar acesso a rotas protegidas.
-
-## Considerações de segurança
-
-- Garanta que `JWT_SECRET` seja forte, rotacionado periodicamente e não versionado.
-- Utilize HTTPS em produção para proteger credenciais e tokens em trânsito.
-- Armazene o token com segurança no cliente (evitar localStorage quando possível; considerar cookies HTTPOnly + SameSite se for aplicável ao fluxo).
-- Respostas de erro não diferenciam entre usuário inexistente e senha incorreta (bom para evitar enumeração de usuários).
-- Considere adicionar:
-  - Limitação de tentativas (rate limiting + lockout temporário).
-  - Auditoria de logins.
-  - 2FA/MFA.
-  - Refresh tokens + revogação de sessões (lista de bloqueio ou rotação).
-  - Normalização do `identifier` (e.g., lowercase/trim) conforme a modelagem de dados.
-
 ## Integração com o Prisma
 
 A função consulta o modelo `user` com:
@@ -159,18 +144,6 @@ Certifique-se de que o schema Prisma contenha esses campos e que `password` arma
 
 - Em caso de exceções, o controller loga no servidor: `console.error('Error during sign in:', error)` e responde `500`.
 - Em produção, prefira um logger estruturado (e.g., pino, winston) com níveis de log.
-
-## Possíveis melhorias
-
-- Padronizar respostas com um envelope de erro/sucesso.
-- Internacionalização (i18n) das mensagens de erro.
-- Configurar algoritmo JWT explicitamente e auditar claims.
-- Adicionar testes unitários e de integração:
-  - Mock do Prisma para cenários de usuário encontrado/não encontrado.
-  - Mock do `bcrypt.compare`.
-  - Verificação da remoção do campo `password`.
-  - Verificação do tempo de expiração do token.
-  - Casos para 400, 401 e 500.
 
 ## Resumo
 
