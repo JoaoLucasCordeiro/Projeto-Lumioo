@@ -9,38 +9,53 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Link } from "react-router-dom";
-import { AnchorLink } from "./AnchorLink"; // Importe o componente criado
 
 export default function Header() {
   const [open, setOpen] = useState(false);
 
   const navLinks = [
-    { label: "Início", href: "#inicio" },
-    { label: "Sobre o Lumioo", href: "#sobre" },
-    { label: "Objetivos", href: "#objetivos" },
-    { label: "Equipe", href: "#equipe" },
-    { label: "Contato", href: "#contato" },
+    { label: "Início", href: "/", type: "route" },
+    { label: "Sobre o Lumioo", href: "#sobre", type: "anchor" },
+    { label: "Objetivos", href: "#objetivos", type: "anchor" },
+    { label: "Equipe", href: "#equipe", type: "anchor" },
+    { label: "Contato", href: "#contato", type: "anchor" },
   ];
+
+  const renderLink = (link: typeof navLinks[0]) => {
+    if (link.type === "route") {
+      return (
+        <Link
+          key={link.href}
+          to={link.href}
+          className="relative text-slate-300 font-medium transition-colors hover:text-white after:content-[''] after:block after:h-[2px] after:w-0 after:bg-red-500 after:mt-1 after:transition-all hover:after:w-full"
+        >
+          {link.label}
+        </Link>
+      );
+    }
+
+    return (
+      <a
+        key={link.href}
+        href={link.href}
+        className="relative text-slate-300 font-medium transition-colors hover:text-white after:content-[''] after:block after:h-[2px] after:w-0 after:bg-red-500 after:mt-1 after:transition-all hover:after:w-full"
+      >
+        {link.label}
+      </a>
+    );
+  };
 
   return (
     <header className="fixed top-0 left-0 w-full z-50 bg-slate-900/50 backdrop-blur-lg border-b border-white/10 h-20">
       <div className="container mx-auto px-6 flex items-center justify-between h-full">
         {/* Logo */}
-        <AnchorLink to="#inicio" className="flex items-center space-x-2">
+        <Link to="/" className="flex items-center space-x-2">
           <img src="/lumioo-header.png" alt="Lumioo" className="h-40 w-auto" />
-        </AnchorLink>
+        </Link>
 
         {/* Navegação Desktop */}
         <nav className="hidden md:flex items-center space-x-10">
-          {navLinks.map((link) => (
-            <AnchorLink
-              key={link.href}
-              to={link.href}
-              className="relative text-slate-300 font-medium transition-colors hover:text-white after:content-[''] after:block after:h-[2px] after:w-0 after:bg-red-500 after:mt-1 after:transition-all hover:after:w-full"
-            >
-              {link.label}
-            </AnchorLink>
-          ))}
+          {navLinks.map(renderLink)}
 
           <Button
             asChild
@@ -76,22 +91,35 @@ export default function Header() {
               {/* Logo dentro do menu mobile */}
               <SheetHeader className="pb-4 border-b border-white/10">
                 <SheetTitle className="flex items-center space-x-2">
-                  <span className="text-slate-100 font-semibold text-lg">Menu</span>
+                  <span className="text-slate-100 font-semibold text-lg">
+                    Menu
+                  </span>
                 </SheetTitle>
               </SheetHeader>
 
               {/* Links mobile */}
               <nav className="flex flex-col space-y-4 mt-4">
-                {navLinks.map((link) => (
-                  <AnchorLink
-                    key={link.href}
-                    to={link.href}
-                    className="text-slate-300 hover:text-white transition-colors font-medium"
-                    onClick={() => setOpen(false)}
-                  >
-                    {link.label}
-                  </AnchorLink>
-                ))}
+                {navLinks.map((link) =>
+                  link.type === "route" ? (
+                    <Link
+                      key={link.href}
+                      to={link.href}
+                      className="text-slate-300 hover:text-white transition-colors font-medium"
+                      onClick={() => setOpen(false)}
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      className="text-slate-300 hover:text-white transition-colors font-medium"
+                      onClick={() => setOpen(false)}
+                    >
+                      {link.label}
+                    </a>
+                  )
+                )}
 
                 <Button
                   asChild
