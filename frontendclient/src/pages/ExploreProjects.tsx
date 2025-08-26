@@ -1,48 +1,93 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from "framer-motion";
 import { TrendingUp, Clock, Star, Code, Brain, Dna, Calculator, Server, Users } from "lucide-react";
 
 // Tipos para os projetos
 interface Project {
-  id: number;
+  id: string;
   title: string;
   description: string;
   category: string;
-  likes: number;
   members: number;
-  isNew: boolean;
-  isTrending: boolean;
+  year: string;
+  image?: string | null;
+  status: string;
+  institution?: string;
+  isNew?: boolean;
+  isTrending?: boolean;
 }
 
-// Dados de exemplo para os projetos
-const projectsData: Project[] = [
-  { id: 1, title: "Sistema de Recomendação com IA", description: "Desenvolvimento de algoritmo de recomendação usando aprendizado de máquina para conteúdos educacionais.", category: "IA", likes: 245, members: 12, isNew: true, isTrending: true },
-  { id: 2, title: "Plataforma de Ensino Adaptativo", description: "Sistema que adapta o conteúdo conforme o desempenho do aluno usando técnicas de IA.", category: "IA", likes: 189, members: 8, isNew: false, isTrending: true },
-  { id: 3, title: "Aplicativo para Cálculo de Limites", description: "Ferramenta interativa para auxiliar no aprendizado de cálculo diferencial e integral.", category: "Matemática", likes: 132, members: 5, isNew: true, isTrending: false },
-  { id: 4, title: "Análise Genômica Comparativa", description: "Estudo comparativo de genomas para identificar marcadores genéticos em populações específicas.", category: "Biologia", likes: 178, members: 7, isNew: false, isTrending: true },
-  { id: 5, title: "Sistema de Deploy Automatizado", description: "Pipeline CI/CD para deploy automatizado em múltiplos ambientes com monitoramento integrado.", category: "DevOps", likes: 210, members: 10, isNew: false, isTrending: true },
-  { id: 6, title: "Framework para Microserviços", description: "Desenvolvimento de um framework especializado para criação de microserviços em Node.js.", category: "Desenvolvimento", likes: 156, members: 6, isNew: true, isTrending: false },
-  { id: 7, title: "Otimização de Algoritmos Quânticos", description: "Pesquisa sobre técnicas de otimização para algoritmos em computação quântica.", category: "Matemática", likes: 98, members: 4, isNew: true, isTrending: false },
-  { id: 8, title: "Análise de Expressão Gênica", description: "Estudo da expressão gênica em tecidos cancerígenos usando técnicas de bioinformática.", category: "Biologia", likes: 167, members: 9, isNew: false, isTrending: true },
-  { id: 9, title: "Plataforma de Monitoramento de APIs", description: "Sistema completo para monitoramento e análise de performance de APIs em tempo real.", category: "DevOps", likes: 143, members: 5, isNew: true, isTrending: false },
-  { id: 10, title: "App para Estudos de UX/UI", description: "Ferramenta colaborativa para testes e prototipagem de interfaces com usuários reais.", category: "Desenvolvimento", likes: 121, members: 7, isNew: false, isTrending: false },
-];
-
-// Categorias disponíveis
+// Categorias disponíveis (baseadas no backend)
 const categories = [
   { id: "all", name: "Todos", icon: Star },
-  { id: "IA", name: "Inteligência Artificial", icon: Brain },
-  { id: "Desenvolvimento", name: "Desenvolvimento", icon: Code },
-  { id: "Biologia", name: "Biologia", icon: Dna },
-  { id: "Matemática", name: "Matemática", icon: Calculator },
-  { id: "DevOps", name: "DevOps", icon: Server },
+  { id: "INTELIGENCIA_ARTIFICIAL", name: "Inteligência Artificial", icon: Brain },
+  { id: "DESENVOLVIMENTO", name: "Desenvolvimento", icon: Code },
+  { id: "BIOLOGIA", name: "Biologia", icon: Dna },
+  { id: "MATEMATICA", name: "Matemática", icon: Calculator },
+  { id: "DEVOPS", name: "DevOps", icon: Server },
+  { id: "ENGENHARIA", name: "Engenharia", icon: Server },
+  { id: "CIENCIAS_SOCIAIS", name: "Ciências Sociais", icon: Users },
+  { id: "SAUDE", name: "Saúde", icon: Users },
+  { id: "OUTROS", name: "Outros", icon: Star },
 ];
+
+// Mapeamento de categorias do backend para exibição
+const categoryMap: Record<string, string> = {
+  "INTELIGENCIA_ARTIFICIAL": "IA",
+  "DESENVOLVIMENTO": "Desenvolvimento",
+  "BIOLOGIA": "Biologia", 
+  "MATEMATICA": "Matemática",
+  "DEVOPS": "DevOps",
+  "ENGENHARIA": "Engenharia",
+  "CIENCIAS_SOCIAIS": "Ciências Sociais",
+  "SAUDE": "Saúde",
+  "OUTROS": "Outros"
+};
+
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function ExploreProjects() {
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [filter, setFilter] = useState("all"); // all, trending, new
+  const [filter, setFilter] = useState("all");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Gerar partículas para o background (igual à landing page)
+  // Fetch projects from backend
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API_URL}/projects`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Adicionar flags isNew e isTrending baseadas na data e popularidade
+        const enhancedProjects = data.map((project: Project) => ({
+          ...project,
+          // Projeto é considerado "novo" se foi criado nos últimos 30 dias
+          isNew: new Date().getTime() - new Date(project.year).getTime() < 30 * 24 * 60 * 60 * 1000,
+          // Projeto é considerado "trending" se tem muitos membros (exemplo)
+          isTrending: project.members > 5
+        }));
+        
+        setProjects(enhancedProjects);
+      } catch (err) {
+        console.error("Error fetching projects:", err);
+        setError("Não foi possível carregar os projetos. Tente novamente mais tarde.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, []);
+
+  // Gerar partículas para o background
   const particles = useMemo(
     () =>
       Array.from({ length: 20 }, () => ({
@@ -56,7 +101,7 @@ export default function ExploreProjects() {
   );
 
   // Filtrar projetos com base na categoria selecionada
-  const filteredProjects = projectsData.filter(project => {
+  const filteredProjects = projects.filter(project => {
     const categoryMatch = selectedCategory === "all" || project.category === selectedCategory;
     
     if (filter === "trending") return categoryMatch && project.isTrending;
@@ -64,6 +109,42 @@ export default function ExploreProjects() {
     
     return categoryMatch;
   });
+
+  // Agrupar categorias únicas dos projetos para exibição inteligente
+  const availableCategories = useMemo(() => {
+    const uniqueCategories = [...new Set(projects.map(p => p.category))];
+    return categories.filter(cat => 
+      cat.id === "all" || uniqueCategories.includes(cat.id)
+    );
+  }, [projects]);
+
+  if (isLoading) {
+    return (
+      <section className="relative bg-slate-900 overflow-hidden min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-slate-300">Carregando projetos...</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="relative bg-slate-900 overflow-hidden min-h-screen flex items-center justify-center">
+        <div className="text-center p-8 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+          <h2 className="text-xl font-bold text-red-500 mb-2">Erro ao carregar</h2>
+          <p className="text-slate-400 mb-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="relative bg-slate-900 overflow-hidden min-h-screen">
@@ -166,7 +247,7 @@ export default function ExploreProjects() {
             </button>
           </motion.div>
 
-          {/* Categorias */}
+          {/* Categorias (inteligentes - mostram apenas as categorias que existem) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -176,7 +257,7 @@ export default function ExploreProjects() {
           >
             <h3 className="text-2xl font-semibold text-slate-100 mb-6 text-center">Navegar por Categoria</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {categories.map((category) => {
+              {availableCategories.map((category) => {
                 const Icon = category.icon;
                 return (
                   <button
@@ -215,7 +296,7 @@ export default function ExploreProjects() {
               >
                 <div className="flex justify-between items-start mb-4">
                   <span className="px-3 py-1 rounded-full bg-red-900/20 border border-red-700/50 text-red-400 text-xs font-medium">
-                    {project.category}
+                    {categoryMap[project.category] || project.category}
                   </span>
                   <div className="flex gap-2">
                     {project.isNew && (
@@ -237,7 +318,7 @@ export default function ExploreProjects() {
                 <div className="flex justify-between items-center mt-auto pt-4 border-t border-white/10">
                   <div className="flex items-center text-slate-400 text-sm">
                     <Star size={16} className="mr-1 text-amber-400" fill="currentColor" />
-                    <span>{project.likes}</span>
+                    <span>{project.members * 12}</span> {/* Simulação de likes */}
                   </div>
                   <div className="text-slate-400 text-sm">
                     <Users size={16} className="inline mr-1 text-blue-400" />
