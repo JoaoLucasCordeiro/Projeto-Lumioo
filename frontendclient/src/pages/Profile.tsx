@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { Sidebar } from "../components/shared/Sidebar";
 import { ProfileHeader } from "@/components/shared/ProfileHeader";
 import { MobileSidebar } from "@/components/shared/MobileSidebar";
@@ -28,7 +29,8 @@ interface UserProfileData {
 }
 
 export function ProfilePage() {
-  const { token, updateUserContext } = useAuth(); // Pega a função de update do contexto
+  const { username } = useParams<{ username?: string }>(); // Pega o username da URL, se existir
+  const { user, token, updateUserContext } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
@@ -36,11 +38,17 @@ export function ProfilePage() {
   const [editableData, setEditableData] = useState<Partial<UserProfileData>>({});
   const [isLoading, setIsLoading] = useState(true);
 
+  // Verifica se o usuário logado é o dono do perfil que está sendo visto
+  const isOwner = !username || user?.username === username;
+
   const fetchProfile = useCallback(async () => {
-    if (!token) return;
+    // Define a URL baseada em quem estamos visitando
+    const endpoint = username ? `/profile/${username}` : '/profile';
+    const url = `${API_URL}${endpoint}`;
+
     try {
-      const response = await fetch(`${API_URL}/profile`, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const response = await fetch(url, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
       });
       if (!response.ok) throw new Error("Falha ao buscar dados do perfil.");
       const data = await response.json();
@@ -48,12 +56,14 @@ export function ProfilePage() {
       setEditableData(data);
     } catch (error) {
       console.error(error);
+      setProfileData(null);
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, username]);
 
   useEffect(() => {
+    setIsLoading(true);
     fetchProfile();
   }, [fetchProfile]);
 
@@ -62,8 +72,8 @@ export function ProfilePage() {
   };
 
   const handleEditToggle = () => {
-    if (isEditing) {
-        if (profileData) setEditableData(profileData);
+    if (isEditing && profileData) {
+        setEditableData(profileData);
     }
     setIsEditing(!isEditing);
   };
@@ -76,7 +86,7 @@ export function ProfilePage() {
     if (!token) return;
     setIsLoading(true);
     try {
-        const response = await fetch(`${API_URL}/profile`, { // Usa a rota /profile que funciona
+        const response = await fetch(`${API_URL}/profile`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -88,9 +98,8 @@ export function ProfilePage() {
         if (!response.ok) throw new Error("Falha ao salvar alterações");
 
         updateUserContext(updatedUserData);
-
         setIsEditing(false);
-        await fetchProfile(); // Recarrega os dados da página de perfil
+        await fetchProfile();
     } catch (error) {
         console.error("Failed to save changes:", error);
     } finally {
@@ -98,12 +107,12 @@ export function ProfilePage() {
     }
   };
 
-  if (isLoading && !profileData) {
+  if (isLoading) {
     return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando perfil...</div>;
   }
 
   if (!profileData) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-red-500">Erro ao carregar o perfil.</div>;
+    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-red-500">Perfil não encontrado.</div>;
   }
 
   return (
@@ -119,8 +128,8 @@ export function ProfilePage() {
 
       <main className="overflow-y-auto">
         <ProfileHeader 
-          userData={editableData}
-          isOwner={true}
+          userData={isEditing ? editableData : profileData}
+          isOwner={isOwner}
           isEditing={isEditing}
           onEditToggle={handleEditToggle}
           onDataChange={handleDataChange}
@@ -130,14 +139,16 @@ export function ProfilePage() {
         <ProfileTabs 
           userPosts={profileData.userPosts}
           savedPosts={profileData.savedPosts}
-          isOwner={true}
+          isOwner={isOwner}
           onUpdate={handleUpdate}
         />
 
-        <ProfileInfo 
-          userData={profileData}
-          isEditing={isEditing}
-        />
+        {isOwner && (
+          <ProfileInfo 
+            userData={profileData}
+            isEditing={isEditing}
+          />
+        )}
       </main>
     </div>
   );
