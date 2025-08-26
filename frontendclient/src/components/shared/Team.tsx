@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { Badge } from "../ui/badge";
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 
 export default function Team() {
   const teamMembers = [
@@ -35,7 +36,7 @@ export default function Team() {
     <section className="relative w-full py-24 md:py-32 z-20">
       <div className="container mx-auto px-6">
         {/* Título da Seção */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
@@ -61,10 +62,10 @@ export default function Team() {
             className="lg:w-1/2"
           >
             <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-              O Lumioo é fruto do trabalho dedicado de nossa equipe, formada por <strong className="text-red-400">João Lucas Soares</strong>, aluno do PIBIC, e <strong className="text-red-400">Ivaldir Honório de Farias Junior</strong>, professor e orientador. 
+              O Lumioo é fruto do trabalho dedicado de nossa equipe, formada por <strong className="text-red-400">João Lucas Soares</strong>, aluno do PIBIC, e <strong className="text-red-400">Ivaldir Honório de Farias Junior</strong>, professor e orientador.
             </p>
             <p className="text-lg text-slate-300 mb-8 leading-relaxed">
-              Este projeto só foi possível graças ao apoio da <strong className="text-red-400">Universidade de Pernambuco (UPE)</strong>, que nos proporciona recursos, orientação e inspiração para transformar ideias em soluções reais. 
+              Este projeto só foi possível graças ao apoio da <strong className="text-red-400">Universidade de Pernambuco (UPE)</strong>, que nos proporciona recursos, orientação e inspiração para transformar ideias em soluções reais.
             </p>
             <p className="text-lg text-slate-300 leading-relaxed">
               Juntos, desenvolvemos o Lumioo para conectar pesquisadores, facilitar a divulgação de trabalhos acadêmicos e potencializar a produção científica no Brasil.
@@ -77,19 +78,22 @@ export default function Team() {
               transition={{ duration: 0.6, delay: 0.4 }}
               className="mt-12 flex flex-wrap gap-4 justify-center lg:justify-start"
             >
-              <Button 
-                variant="outline" 
-                className="border-red-400 text-red-400 hover:bg-red-900/20 hover:text-red-300 font-medium px-8 py-6 text-lg transition-all"
-                asChild
-              >
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <Link to="/nosso-time">
+                <Button
+                  variant="outline"
+                  className="border-red-400 text-red-400 hover:bg-red-900/20 hover:text-red-300 font-medium px-8 py-6 text-lg transition-all"
+                  asChild
                 >
-                  Saiba Mais Sobre Nós
-                </motion.button>
-              </Button>
-              <Button 
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Saiba Mais Sobre Nós
+                  </motion.button>
+                </Button>
+              </Link>
+
+              <Button
                 className="bg-gradient-to-r from-[#ff3131] to-red-600 hover:from-[#ff3131]/90 hover:to-red-600/90 text-white font-medium px-8 py-6 text-lg transition-all"
                 asChild
               >
@@ -104,7 +108,7 @@ export default function Team() {
           </motion.div>
 
           {/* Membros da equipe */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: 20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -126,19 +130,19 @@ export default function Team() {
                         {member.initials}
                       </AvatarFallback>
                     </Avatar>
-                    
+
                     <div className="flex-grow flex flex-col justify-between">
                       <div>
                         <h3 className="text-lg font-bold text-slate-100 mb-1 line-clamp-2">{member.name}</h3>
                         <p className="text-slate-400 mb-4 text-sm">{member.role}</p>
                       </div>
-                      
+
                       <div className="flex justify-center gap-3 mt-4">
                         {Object.entries(member.social).map(([platform, url]) => (
                           <TooltipProvider key={platform} delayDuration={100}>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <motion.a 
+                                <motion.a
                                   href={url}
                                   target="_blank"
                                   rel="noopener noreferrer"
@@ -161,9 +165,9 @@ export default function Team() {
                 </motion.div>
               ))}
             </div>
-            
-           
-          
+
+
+
           </motion.div>
         </div>
       </div>
@@ -171,7 +175,6 @@ export default function Team() {
   );
 }
 
-// Componente auxiliar para ícones sociais
 function SocialIcon({ platform }: { platform: string }) {
   const icons: Record<string, JSX.Element> = {
     linkedin: (
