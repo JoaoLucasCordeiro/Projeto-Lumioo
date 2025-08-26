@@ -1,5 +1,6 @@
+// src/pages/ProfilePage.tsx
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/shared/Sidebar";
 import { ProfileHeader } from "@/components/shared/ProfileHeader";
 import { MobileSidebar } from "@/components/shared/MobileSidebar";
@@ -11,6 +12,7 @@ import type { Post } from "@/types/feed";
 const API_URL = import.meta.env.VITE_API_URL;
 
 interface UserProfileData {
+  id: string;
   fullName: string;
   username: string;
   email: string;
@@ -29,8 +31,9 @@ interface UserProfileData {
 }
 
 export function ProfilePage() {
-  const { username } = useParams<{ username?: string }>(); 
+  const { username } = useParams<{ username?: string }>();
   const { user, token, updateUserContext } = useAuth();
+  const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
@@ -105,16 +108,56 @@ export function ProfilePage() {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!token || !profileData?.id) return;
+    try {
+        const response = await fetch(`${API_URL}/conversations`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ recipientId: profileData.id })
+        });
+        const conversation = await response.json();
+        if (!response.ok) throw new Error("Não foi possível iniciar a conversa.");
+        
+        navigate(`/chat/${conversation.id}`);
+    } catch (error) {
+        console.error(error);
+    }
+  };
+
   if (isLoading) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Carregando perfil...</div>;
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="h-12 w-12 border-4 border-red-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-slate-300">Carregando perfil...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!profileData) {
-    return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-red-500">Perfil não encontrado.</div>;
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center p-8 bg-slate-800/50 rounded-xl border border-slate-700/50 backdrop-blur-sm">
+          <h2 className="text-xl font-bold text-red-500 mb-2">Perfil não encontrado</h2>
+          <p className="text-slate-400 mb-4">O perfil que você está procurando não existe ou não pôde ser carregado.</p>
+          <button 
+            onClick={() => navigate(-1)} 
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            Voltar
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 grid grid-cols-1 md:grid-cols-[280px_1fr]">
+    <div className="min-h-screen bg-slate-900 flex">
       <div className="hidden md:block sticky top-0 h-screen overflow-y-auto">
         <Sidebar />
       </div>
@@ -124,7 +167,7 @@ export function ProfilePage() {
         setMobileSidebarOpen={setMobileSidebarOpen} 
       />
 
-      <main className="overflow-y-auto">
+      <main className="flex-1 overflow-y-auto">
         <ProfileHeader 
           userData={isEditing ? editableData : profileData}
           isOwner={isOwner}
@@ -132,6 +175,7 @@ export function ProfilePage() {
           onEditToggle={handleEditToggle}
           onDataChange={handleDataChange}
           onSaveChanges={handleSaveChanges}
+          onSendMessage={handleSendMessage}
         />
 
         <ProfileTabs 
