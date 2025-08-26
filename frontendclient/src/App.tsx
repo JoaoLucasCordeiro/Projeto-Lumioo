@@ -17,6 +17,8 @@ import { PostDetails } from './pages/PostDetails';
 import { EditPostPage } from './pages/EditPosts';
 import ExploreProjects from './pages/ExploreProjects';
 import OurTeam from './pages/OurTeam';
+import { ChatPage } from './pages/Chat';
+import { ConversationsPage } from './pages/Conversation';
 
 const App = () => {
   return (
@@ -40,6 +42,8 @@ const App = () => {
       <Route path="/projetos" element={<ProjectsPage />} />
       <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
       <Route path="/novo-post" element={<NewPostPage />} />
+      <Route path="/chat/:conversationId" element={<ChatPage />} />
+      <Route path="/mensagens" element={<ConversationsPage />} />
     </Routes>
   );
 }
