@@ -15,6 +15,8 @@ import { SubmitWorkPage } from './pages/SubmitWork';
 import { NewProjectPage } from './pages/NewProject';
 import { PostDetails } from './pages/PostDetails';
 import { EditPostPage } from './pages/EditPosts';
+import ExploreProjects from './pages/ExploreProjects';
+import OurTeam from './pages/OurTeam';
 
 const App = () => {
   return (
@@ -32,6 +34,8 @@ const App = () => {
       <Route path="/post/:id" element={<PostDetails />} />
       <Route path="/post/:id/edit" element={<EditPostPage />} />
       <Route path="/novo-projeto" element={<NewProjectPage />} />
+      <Route path="/explorar-projetos" element={<ExploreProjects />} />
+      <Route path="/nosso-time" element={<OurTeam />} />
       <Route path="/projetos" element={<ProjectsPage />} />
       <Route path="/projetos/:id" element={<ProjectDetailsPage />} />
       <Route path="/novo-post" element={<NewPostPage />} />
