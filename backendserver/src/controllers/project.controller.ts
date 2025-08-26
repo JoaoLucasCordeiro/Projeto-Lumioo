@@ -133,7 +133,7 @@ export const getProjectById = async (req: Request, res: Response) => {
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
-        owner: { select: { fullName: true } },
+        owner: { select: { fullName: true, username: true, institution: true } },
         teamMembers: true, 
       },
     });
@@ -151,7 +151,9 @@ export const getProjectById = async (req: Request, res: Response) => {
       year: new Date(project.createdAt).getFullYear().toString(),
       image: project.image,
       members: project.teamMembers.length,
-      institution: project.owner.fullName, 
+      author: project.owner.fullName, 
+      authorUsername: project.owner.username, 
+      institution: project.owner.institution, 
       status: project.status,
       team: project.teamMembers.map((member: { name: string; role: string; photo: string | null }) => ({
         name: member.name,
@@ -168,6 +170,7 @@ export const getProjectById = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Could not fetch project details." });
   }
 };
+
 
 export const updateProject = async (req: Request, res: Response) => {
   const ownerId = req.user?.userId;
