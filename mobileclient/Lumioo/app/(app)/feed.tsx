@@ -8,127 +8,16 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/contexts/ThemeContext';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface User {
-  id: string;
-  name: string;
-  username: string;
-  initials: string;
-  institution: string;
-  avatarColor: string;
-}
-
-interface Comment {
-  id: string;
-  user: User;
-  text: string;
-}
-
-interface Post {
-  id: string;
-  user: User;
-  content: string;
-  likes: number;
-  liked: boolean;
-  saved: boolean;
-  commentsCount: number;
-  comments: Comment[];
-  createdAt: string;
-}
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const CURRENT_USER_ID = 'user_1';
-
-const USERS: Record<string, User> = {
-  user_1: {
-    id: 'user_1', name: 'João Lucas', username: '@joaolucas',
-    initials: 'JL', institution: 'USP · Eng. Computação', avatarColor: '#ff3131',
-  },
-  user_2: {
-    id: 'user_2', name: 'Maria Silva', username: '@mariasilva',
-    initials: 'MS', institution: 'UNICAMP · Medicina', avatarColor: '#3b82f6',
-  },
-  user_3: {
-    id: 'user_3', name: 'Pedro Costa', username: '@pedrocosta',
-    initials: 'PC', institution: 'UFMG · Ciência da Computação', avatarColor: '#10b981',
-  },
-  user_4: {
-    id: 'user_4', name: 'Ana Ferreira', username: '@anaferreira',
-    initials: 'AF', institution: 'PUC · Design', avatarColor: '#8b5cf6',
-  },
-  user_5: {
-    id: 'user_5', name: 'Carlos Lima', username: '@carloslima',
-    initials: 'CL', institution: 'UFRJ · Física', avatarColor: '#f59e0b',
-  },
-};
-
-const INITIAL_POSTS: Post[] = [
-  {
-    id: 'post_1', user: USERS.user_2,
-    content: 'Acabei de publicar meu artigo sobre inteligência artificial aplicada ao diagnóstico precoce de câncer! Foram 2 anos de pesquisa intensa. Muito orgulhosa deste resultado! 🎉',
-    likes: 87, liked: false, saved: false, commentsCount: 14,
-    comments: [
-      { id: 'c1', user: USERS.user_3, text: 'Parabéns! Trabalho incrível! Em qual journal vai publicar?' },
-      { id: 'c2', user: USERS.user_1, text: 'Sensacional, Maria! Mal posso esperar para ler.' },
-    ],
-    createdAt: '1h',
-  },
-  {
-    id: 'post_2', user: USERS.user_1,
-    content: 'Finalizei meu TCC sobre otimização de algoritmos de ML para dispositivos embarcados. Apresento na próxima semana! Quem tiver dicas, pode mandar 😅',
-    likes: 42, liked: true, saved: true, commentsCount: 8,
-    comments: [
-      { id: 'c3', user: USERS.user_4, text: 'Vai lá! Você consegue! 💪' },
-    ],
-    createdAt: '3h',
-  },
-  {
-    id: 'post_3', user: USERS.user_3,
-    content: 'Procurando colaboradores para um projeto open-source de análise de dados climáticos com Python e React. Se tiver interesse, manda mensagem! Seria incrível ter pessoas de diferentes áreas no time.',
-    likes: 23, liked: false, saved: false, commentsCount: 5,
-    comments: [
-      { id: 'c4', user: USERS.user_5, text: 'Tenho interesse! Mando DM.' },
-      { id: 'c5', user: USERS.user_2, text: 'Compartilhei com minha turma, projeto incrível!' },
-    ],
-    createdAt: '5h',
-  },
-  {
-    id: 'post_4', user: USERS.user_4,
-    content: 'Workshop de UX/UI para estudantes universitários neste sábado! Vamos falar sobre design thinking, prototipação e tendências de 2026. Inscrições gratuitas pelo link na bio ✨',
-    likes: 156, liked: false, saved: false, commentsCount: 29,
-    comments: [
-      { id: 'c6', user: USERS.user_1, text: 'Já me inscrevi! Ansioso 🙌' },
-    ],
-    createdAt: '8h',
-  },
-  {
-    id: 'post_5', user: USERS.user_1,
-    content: 'Reflexão do dia: a academia me ensinou que falhar faz parte do processo. Meu primeiro experimento de TCC deu errado, o segundo também... mas no terceiro acertei. Não desistam! 🙏',
-    likes: 201, liked: false, saved: false, commentsCount: 33,
-    comments: [
-      { id: 'c7', user: USERS.user_2, text: 'Que mensagem linda! Preciso ouvir isso hoje.' },
-      { id: 'c8', user: USERS.user_3, text: 'Salvando esse post 🔥' },
-    ],
-    createdAt: '1d',
-  },
-  {
-    id: 'post_6', user: USERS.user_5,
-    content: 'Publicamos um paper sobre supercondutividade em temperatura ambiente! Ainda em peer review, mas estamos muito otimistas. A física nunca deixa de surpreender. 🔬⚡',
-    likes: 312, liked: false, saved: false, commentsCount: 45,
-    comments: [
-      { id: 'c9', user: USERS.user_4, text: 'Isso seria revolucionário! Boa sorte no review!' },
-    ],
-    createdAt: '2d',
-  },
-];
+import {
+  INITIAL_POSTS, CURRENT_USER_ID,
+  type User, type Post,
+} from '@/constants/feedData';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -216,17 +105,25 @@ function PostCard({
   onLike,
   onSave,
   onMenuPress,
+  onPress,
 }: {
   post: Post;
   onLike: (id: string) => void;
   onSave: (id: string) => void;
   onMenuPress: (post: Post) => void;
+  onPress: (post: Post) => void;
 }) {
   const { colors } = useTheme();
   const isOwn = post.user.id === CURRENT_USER_ID;
 
   return (
-    <View style={[styles.postCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
+    <Pressable
+      onPress={() => onPress(post)}
+      style={({ pressed }) => [
+        styles.postCard,
+        { backgroundColor: colors.container, borderColor: colors.border, opacity: pressed ? 0.95 : 1 },
+      ]}
+    >
       {/* Header */}
       <View style={styles.postHeader}>
         <Avatar user={post.user} size={42} />
@@ -279,7 +176,13 @@ function PostCard({
           </Pressable>
 
           {/* Comment */}
-          <Pressable style={styles.actionBtn} onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onPress(post);
+            }}
+          >
             <Ionicons name="chatbubble-outline" size={20} color={colors.textMuted} />
             <Text style={[styles.actionCount, { color: colors.textMuted }]}>{post.commentsCount}</Text>
           </Pressable>
@@ -328,13 +231,13 @@ function PostCard({
 
       {/* See all comments */}
       {post.commentsCount > 2 && (
-        <Pressable onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}>
+        <Pressable onPress={() => onPress(post)}>
           <Text style={[styles.seeAll, { color: colors.textMuted }]}>
             Ver todos os {post.commentsCount} comentários
           </Text>
         </Pressable>
       )}
-    </View>
+    </Pressable>
   );
 }
 
@@ -343,6 +246,7 @@ function PostCard({
 export default function FeedScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
@@ -357,9 +261,7 @@ export default function FeedScreen() {
   };
 
   const handleSave = (id: string) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, saved: !p.saved } : p))
-    );
+    setPosts((prev) => prev.map((p) => (p.id === id ? { ...p, saved: !p.saved } : p)));
   };
 
   const handleDelete = (id: string) => {
@@ -385,6 +287,11 @@ export default function FeedScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedPost(null);
     setTimeout(() => Alert.alert('Denúncia enviada', 'Obrigado por nos ajudar a manter a comunidade segura.'), 200);
+  };
+
+  const handlePostPress = (post: Post) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push(`/(app)/post/${post.id}` as any);
   };
 
   const bottomPad = Math.max(insets.bottom, 8) + 16 + 72 + 12;
@@ -423,6 +330,7 @@ export default function FeedScreen() {
             post={post}
             onLike={handleLike}
             onSave={handleSave}
+            onPress={handlePostPress}
             onMenuPress={(p) => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setSelectedPost(p);
