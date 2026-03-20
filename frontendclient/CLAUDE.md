@@ -54,7 +54,7 @@ The `@` alias is configured to resolve to `./src`:
 ## Key Architectural Patterns
 
 ### Authentication Flow
-1. JWT-based authentication with tokens stored in localStorage
+1. JWT-based authentication with tokens stored in localStorage under keys `lumioo_token` and `lumioo_user`
 2. **Auth Context** (`src/contexts/auth.context.tsx`) provides:
    - `user`: Current user object
    - `token`: JWT token for API requests
@@ -64,7 +64,7 @@ The `@` alias is configured to resolve to `./src`:
    - `saveAuthData()` / `clearAuthData()` for localStorage management
    - `getToken()` / `getUser()` for retrieving stored data
    - `updateLocalUser()` for updating user profile data locally
-4. Protected routes check for token presence
+4. There is no dedicated `ProtectedRoute` wrapper — auth checks are handled individually within each page component
 
 ### API Integration Pattern
 API calls use native `fetch()` with the following pattern:
@@ -98,10 +98,13 @@ const response = await fetch(`${API_URL}/endpoint`, {
 - **Page Components** (`pages/`): Route-level components that orchestrate shared components
 
 ### Routing Structure
-Routes are defined in `src/App.tsx` using React Router DOM:
-- Public routes: `/`, `/login`, `/cadastro`, `/nosso-time`
-- Protected routes: `/feed`, `/perfil`, `/configuracoes`, `/trabalhos`, `/projetos`, `/mensagens`
-- Dynamic routes: `/perfil/:username`, `/post/:id`, `/projetos/:id`, `/chat/:conversationId`
+All routes are defined in `src/App.tsx` using React Router DOM (no route guards at the router level):
+- Public: `/`, `/login`, `/cadastro`, `/nosso-time`, `/explorar-projetos`
+- Authenticated pages: `/feed`, `/perfil`, `/perfil/:username`, `/configuracoes`
+- Posts: `/posts`, `/post/:id`, `/post/:id/edit`, `/novo-post`
+- Works: `/trabalhos`, `/trabalhos/:id`, `/submeter-trabalho`
+- Projects: `/projetos`, `/projetos/:id`, `/novo-projeto`
+- Chat: `/mensagens`, `/chat/:conversationId`
 
 ### Pagination Pattern
 The feed uses **cursor-based pagination** for infinite scrolling:
