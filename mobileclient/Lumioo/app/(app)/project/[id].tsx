@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  TextInput,
-  Modal,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTheme } from '@/contexts/ThemeContext';
-import { INITIAL_PROJECTS, type Project } from '@/constants/projectsData';
 import type { User } from '@/constants/feedData';
+import { INITIAL_PROJECTS, type Project } from '@/constants/projectsData';
+import { useTheme } from '@/contexts/ThemeContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -359,7 +359,7 @@ export default function ProjectDetailScreen() {
 
         {/* Author */}
         <View style={styles.section}>
-          <SectionLabel label="Criador" />
+          <SectionLabel label="Líder" />
           <View style={[styles.authorCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
             <Avatar user={project.author} size={48} />
             <View style={styles.authorInfo}>
