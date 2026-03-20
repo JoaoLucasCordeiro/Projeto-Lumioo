@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
-import { Prisma, PrismaClient, ProjectStatus } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// As interfaces AuthenticatedRequest e TeamMemberInput foram removidas
+import { Prisma, ProjectStatus } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export const createProject = async (req: Request, res: Response) => {
   const ownerId = req.user?.userId;
@@ -85,7 +82,7 @@ export const getAllProjects = async (req: Request, res: Response) => {
     }
 
     if (category && category !== 'all') {
-      whereClause.category = { equals: category as string, mode: 'insensitive' };
+      whereClause.category = { contains: category as string, mode: 'insensitive' };
     }
 
     if (year && year !== 'all') {
@@ -98,7 +95,13 @@ export const getAllProjects = async (req: Request, res: Response) => {
       }
     }
 
+    const { cursor } = req.query;
+    const LIMIT = 20;
+
     const projectsFromDb = await prisma.project.findMany({
+      take: LIMIT,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor as string } : undefined,
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -115,11 +118,12 @@ export const getAllProjects = async (req: Request, res: Response) => {
       year: new Date(project.createdAt).getFullYear().toString(),
       image: project.image,
       members: project._count.teamMembers,
-      institution: project.owner.fullName, 
+      institution: project.owner.fullName,
       status: project.status,
     }));
 
-    res.status(200).json(formattedProjects);
+    const nextCursor = projectsFromDb.length === LIMIT ? projectsFromDb[projectsFromDb.length - 1].id : null;
+    res.status(200).json({ projects: formattedProjects, nextCursor });
 
   } catch (error) {
     console.error("Error fetching projects:", error);

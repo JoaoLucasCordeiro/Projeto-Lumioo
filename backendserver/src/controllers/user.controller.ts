@@ -1,10 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-
-const prisma = new PrismaClient();
-
-// A interface AuthenticatedRequest foi removida
+import { prisma } from '../lib/prisma';
 
 export const createUser = async (req: Request, res: Response) => {
   try {
@@ -42,7 +38,13 @@ export const createUser = async (req: Request, res: Response) => {
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await prisma.user.findMany();
+    const users = await prisma.user.findMany({
+      select: {
+        id: true, fullName: true, username: true, academicEmail: true,
+        institution: true, academicLevel: true, dateOfBirth: true,
+        bio: true, avatar: true, createdAt: true, updatedAt: true,
+      }
+    });
     res.status(200).json(users);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -55,6 +57,11 @@ export const getUserById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = await prisma.user.findUnique({
       where: { id },
+      select: {
+        id: true, fullName: true, username: true, academicEmail: true,
+        institution: true, academicLevel: true, dateOfBirth: true,
+        bio: true, avatar: true, createdAt: true, updatedAt: true,
+      }
     });
 
     if (!user) {
@@ -94,22 +101,24 @@ export const getMyProfile = async (req: Request, res: Response) => {
           }
         },
         posts: {
+          take: 20,
           orderBy: { createdAt: 'desc' },
           include: {
             author: { select: { username: true, avatar: true } },
-            likes: { select: { userId: true } },
-            _count: { select: { comments: true } },
+            likes: { where: { userId }, select: { userId: true } },
+            _count: { select: { comments: true, likes: true } },
             savedBy: { where: { userId }, select: { userId: true } },
           }
         },
         savedPosts: {
+          take: 20,
           orderBy: { savedAt: 'desc' },
           select: {
             post: {
               include: {
                 author: { select: { username: true, avatar: true } },
-                likes: { select: { userId: true } },
-                _count: { select: { comments: true } },
+                likes: { where: { userId }, select: { userId: true } },
+                _count: { select: { comments: true, likes: true } },
                 savedBy: { where: { userId }, select: { userId: true } },
               }
             }
@@ -143,10 +152,10 @@ export const getMyProfile = async (req: Request, res: Response) => {
         userImage: userProfile.avatar,
         image: post.image,
         caption: post.caption,
-        likes: post.likes.length,
+        likes: post._count.likes,
         comments: post._count.comments,
         timePosted: post.createdAt.toISOString(),
-        isLiked: post.likes.some((like: { userId: string }) => like.userId === userId),
+        isLiked: post.likes.length > 0,
         isSaved: post.savedBy.length > 0,
       })),
       savedPosts: userProfile.savedPosts.map((saved: any) => ({
@@ -156,10 +165,10 @@ export const getMyProfile = async (req: Request, res: Response) => {
         userImage: saved.post.author.avatar,
         image: saved.post.image,
         caption: saved.post.caption,
-        likes: saved.post.likes.length,
+        likes: saved.post._count.likes,
         comments: saved.post._count.comments,
         timePosted: saved.post.createdAt.toISOString(),
-        isLiked: saved.post.likes.some((like: { userId: string }) => like.userId === userId),
+        isLiked: saved.post.likes.length > 0,
         isSaved: true,
       }))
     };
@@ -214,8 +223,17 @@ export const updateUser = async (req: Request, res: Response) => {
 };
 
 export const deleteUser = async (req: Request, res: Response) => {
+  const tokenUserId = req.user?.userId;
+  if (!tokenUserId) {
+    return res.status(403).json({ error: 'User not authenticated.' });
+  }
+
+  const { id } = req.params;
+  if (tokenUserId !== id) {
+    return res.status(403).json({ error: 'Forbidden: You can only delete your own account.' });
+  }
+
   try {
-    const { id } = req.params;
     await prisma.user.delete({
       where: { id },
     });
@@ -289,11 +307,12 @@ export const getUserProfileByUsername = async (req: Request, res: Response) => {
           select: { posts: true }
         },
         posts: {
+          take: 20,
           orderBy: { createdAt: 'desc' },
           include: {
             author: { select: { username: true, avatar: true } },
-            likes: { select: { userId: true } },
-            _count: { select: { comments: true } },
+            likes: { where: { userId: loggedInUserId ?? '' }, select: { userId: true } },
+            _count: { select: { comments: true, likes: true } },
             savedBy: { where: { userId: loggedInUserId }, select: { userId: true } },
           }
         },
@@ -324,10 +343,10 @@ export const getUserProfileByUsername = async (req: Request, res: Response) => {
         userImage: post.author.avatar,
         image: post.image,
         caption: post.caption,
-        likes: post.likes.length,
+        likes: post._count.likes,
         comments: post._count.comments,
         timePosted: post.createdAt.toISOString(),
-        isLiked: loggedInUserId ? post.likes.some((like: { userId: string }) => like.userId === loggedInUserId) : false,
+        isLiked: post.likes.length > 0,
         isSaved: loggedInUserId ? post.savedBy.length > 0 : false,
       })),
       savedPosts: [] 

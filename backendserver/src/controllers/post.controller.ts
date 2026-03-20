@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
-import { Prisma, PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// A interface AuthenticatedRequest foi removida
+import { Prisma } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export const getFeedPosts = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
@@ -22,8 +19,8 @@ export const getFeedPosts = async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
       include: {
         author: { select: { username: true, avatar: true } },
-        likes: { select: { userId: true } },
-        _count: { select: { comments: true } },
+        likes: { where: { userId }, select: { userId: true } },
+        _count: { select: { comments: true, likes: true } },
         savedBy: { where: { userId }, select: { userId: true } },
       },
     });
@@ -31,14 +28,14 @@ export const getFeedPosts = async (req: Request, res: Response) => {
     const formattedPosts = postsFromDb.map(post => ({
       id: post.id,
       username: post.author.username,
-      authorId: post.authorId, 
+      authorId: post.authorId,
       userImage: post.author.avatar,
       image: post.image,
       caption: post.caption,
-      likes: post.likes.length,
+      likes: post._count.likes,
       comments: post._count.comments,
       timePosted: post.createdAt.toISOString(),
-      isLiked: post.likes.some(like => like.userId === userId),
+      isLiked: post.likes.length > 0,
       isSaved: post.savedBy.length > 0,
     }));
 
@@ -71,7 +68,15 @@ export const createPost = async (req: Request, res: Response) => {
         authorId: userId, 
       },
     });
-    res.status(201).json(newPost);
+    res.status(201).json({
+      id: newPost.id,
+      caption: newPost.caption,
+      image: newPost.image,
+      location: newPost.location,
+      hashtags: newPost.hashtags,
+      authorId: newPost.authorId,
+      createdAt: newPost.createdAt.toISOString(),
+    });
   } catch (error) {
     console.error('Error creating post:', error);
     res.status(500).json({ error: 'An error occurred while creating the post.' });
@@ -80,7 +85,8 @@ export const createPost = async (req: Request, res: Response) => {
 
 export const getAllPosts = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
-  const { search } = req.query;
+  const { search, cursor } = req.query;
+  const LIMIT = 20;
 
   try {
     const whereClause: Prisma.PostWhereInput = search ? {
@@ -92,12 +98,15 @@ export const getAllPosts = async (req: Request, res: Response) => {
     } : {};
 
     const postsFromDb = await prisma.post.findMany({
+      take: LIMIT,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor as string } : undefined,
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
         author: { select: { username: true, avatar: true } },
-        likes: { select: { userId: true } },
-        _count: { select: { comments: true } },
+        likes: { where: { userId: userId ?? '' }, select: { userId: true } },
+        _count: { select: { comments: true, likes: true } },
         savedBy: { where: { userId }, select: { userId: true } },
       },
     });
@@ -109,14 +118,15 @@ export const getAllPosts = async (req: Request, res: Response) => {
       userImage: post.author.avatar,
       image: post.image,
       caption: post.caption,
-      likes: post.likes.length,
+      likes: post._count.likes,
       comments: post._count.comments,
       timePosted: post.createdAt.toISOString(),
-      isLiked: userId ? post.likes.some(like => like.userId === userId) : false,
+      isLiked: post.likes.length > 0,
       isSaved: userId ? post.savedBy.length > 0 : false,
     }));
 
-    res.status(200).json(formattedPosts);
+    const nextCursor = postsFromDb.length === LIMIT ? postsFromDb[postsFromDb.length - 1].id : null;
+    res.status(200).json({ posts: formattedPosts, nextCursor });
 
   } catch (error) {
     console.error("Error fetching all posts:", error);
@@ -133,13 +143,15 @@ export const getPostById = async (req: Request, res: Response) => {
       where: { id },
       include: {
         author: { select: { username: true, avatar: true } },
-        likes: { select: { userId: true } },
+        likes: { where: { userId: userId ?? '' }, select: { userId: true } },
+        _count: { select: { likes: true } },
         savedBy: { where: { userId }, select: { userId: true } },
         comments: {
           orderBy: { createdAt: 'asc' },
           include: {
             author: { select: { username: true, avatar: true } },
-            likes: { select: { userId: true } },
+            likes: { where: { userId: userId ?? '' }, select: { userId: true } },
+            _count: { select: { likes: true } },
           },
         },
       },
@@ -156,19 +168,19 @@ export const getPostById = async (req: Request, res: Response) => {
       userImage: post.author.avatar,
       image: post.image,
       caption: post.caption,
-      likes: post.likes.length,
+      likes: post._count.likes,
       timePosted: post.createdAt.toISOString(),
-      isLiked: userId ? post.likes.some(like => like.userId === userId) : false,
+      isLiked: post.likes.length > 0,
       isSaved: userId ? post.savedBy.length > 0 : false,
       comments: post.comments.map(comment => ({
         id: comment.id,
         username: comment.author.username,
-        authorId: comment.authorId, 
+        authorId: comment.authorId,
         userImage: comment.author.avatar,
         text: comment.text,
         timePosted: comment.createdAt.toISOString(),
-        likes: comment.likes.length,
-        isLiked: userId ? comment.likes.some(like => like.userId === userId) : false,
+        likes: comment._count.likes,
+        isLiked: comment.likes.length > 0,
       })),
     };
 

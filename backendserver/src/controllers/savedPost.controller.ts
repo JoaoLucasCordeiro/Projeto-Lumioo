@@ -1,9 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// A interface AuthenticatedRequest foi removida
+import { prisma } from '../lib/prisma';
 
 export const toggleSavePost = async (req: Request, res: Response) => {
     const userId = req.user?.userId;

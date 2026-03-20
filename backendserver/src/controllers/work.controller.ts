@@ -1,9 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, WorkType } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// A interface AuthenticatedRequest foi removida
+import { Prisma, WorkType } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
 export const createWork = async (req: Request, res: Response) => {
   const authorId = req.user?.userId;
@@ -106,7 +103,13 @@ export const getAllWorks = async (req: Request, res: Response) => {
       whereClause.institution = { contains: area as string, mode: 'insensitive' };
     }
 
+    const { cursor } = req.query;
+    const LIMIT = 20;
+
     const worksFromDb = await prisma.work.findMany({
+      take: LIMIT,
+      skip: cursor ? 1 : 0,
+      cursor: cursor ? { id: cursor as string } : undefined,
       where: whereClause,
       orderBy: { createdAt: 'desc' },
       include: {
@@ -127,7 +130,8 @@ export const getAllWorks = async (req: Request, res: Response) => {
         image: work.coverImage,
     }));
 
-    res.status(200).json(formattedWorks);
+    const nextCursor = worksFromDb.length === LIMIT ? worksFromDb[worksFromDb.length - 1].id : null;
+    res.status(200).json({ works: formattedWorks, nextCursor });
   } catch (error) {
     console.error('Error fetching works:', error);
     res.status(500).json({ error: 'An error occurred while fetching works.' });
