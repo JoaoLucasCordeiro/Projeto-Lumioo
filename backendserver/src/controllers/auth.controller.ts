@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export const signIn = async (req: Request, res: Response) => {
   try {
@@ -13,14 +11,10 @@ export const signIn = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Email/username and password are required.' });
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { academicEmail: identifier },
-          { username: identifier },
-        ],
-      },
-    });
+    const isEmail = identifier.includes('@');
+    const user = isEmail
+      ? await prisma.user.findUnique({ where: { academicEmail: identifier } })
+      : await prisma.user.findUnique({ where: { username: identifier } });
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials.' });

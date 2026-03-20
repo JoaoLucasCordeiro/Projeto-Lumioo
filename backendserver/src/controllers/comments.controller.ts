@@ -1,9 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// A interface AuthenticatedRequest foi removida daqui
+import { prisma } from '../lib/prisma';
 
 export const createComment = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
@@ -109,10 +105,6 @@ export const deleteComment = async (req: Request, res: Response) => {
         if (!comment) return res.status(404).json({ error: 'Comment not found.' });
         if (comment.authorId !== userId) return res.status(403).json({ error: 'User not authorized to delete this comment.' });
         
-        await prisma.like.deleteMany({
-            where: { commentId: commentId }
-        });
-
         await prisma.comment.delete({ where: { id: commentId } });
         res.status(204).send();
     } catch (error) {

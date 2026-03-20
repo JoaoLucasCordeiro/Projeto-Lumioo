@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export const findOrCreateConversation = async (req: Request, res: Response) => {
   const userId = req.user?.userId;
@@ -80,33 +78,7 @@ export const getUserConversations = async (req: Request, res: Response) => {
       },
     });
 
-    const uniqueConversations = conversations.reduce((acc, conversation) => {
-      if (conversation.participants.length === 0) return acc;
-      
-      const participantId = conversation.participants[0].id;
-      
-      const existingConversation = acc.find(conv => 
-        conv.participants.length > 0 && conv.participants[0].id === participantId
-      );
-      
-      if (!existingConversation) {
-        acc.push(conversation);
-      } else if (new Date(conversation.updatedAt) > new Date(existingConversation.updatedAt)) {
-        const index = acc.indexOf(existingConversation);
-        acc[index] = conversation;
-      }
-      
-      return acc;
-    }, [] as typeof conversations);
-
-    const conversationsWithCount = uniqueConversations.map(conv => ({
-      ...conv,
-      _count: {
-        messages: 0
-      }
-    }));
-    
-    res.status(200).json(conversationsWithCount);
+    res.status(200).json(conversations);
   } catch (error) {
     console.error("Error fetching conversations:", error);
     res.status(500).json({ error: 'Could not fetch conversations.' });
@@ -158,6 +130,11 @@ export const getMessagesForConversation = async (req: Request, res: Response) =>
     if (!userId) return res.status(403).json({ error: 'User not authenticated.' });
 
     try {
+        const conversation = await prisma.conversation.findFirst({
+            where: { id: conversationId, participants: { some: { id: userId } } }
+        });
+        if (!conversation) return res.status(403).json({ error: 'Access denied.' });
+
         const messages = await prisma.message.findMany({
             where: { conversationId },
             orderBy: { createdAt: 'asc' },

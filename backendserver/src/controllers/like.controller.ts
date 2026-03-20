@@ -1,15 +1,12 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
-
-// A interface AuthenticatedRequest foi removida daqui
+import { prisma } from '../lib/prisma';
 
 export const togglePostLike = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
     const { postId } = req.params;
 
     if (!userId) return res.status(403).json({ error: 'User not authenticated.' });
+    if (!postId) return res.status(400).json({ error: 'postId is required.' });
 
     try {
         const existingLike = await prisma.like.findUnique({
@@ -23,7 +20,7 @@ export const togglePostLike = async (req: Request, res: Response) => {
             await prisma.like.create({
                 data: { userId, postId },
             });
-            res.status(201).json({ message: 'Post liked successfully.' });
+            res.status(200).json({ message: 'Post liked successfully.' });
         }
     } catch (error) {
         res.status(500).json({ error: 'Could not process like action.' });
@@ -36,6 +33,7 @@ export const toggleCommentLike = async (req: Request, res: Response) => {
     const { commentId } = req.params;
 
     if (!userId) return res.status(403).json({ error: 'User not authenticated.' });
+    if (!commentId) return res.status(400).json({ error: 'commentId is required.' });
 
     try {
         const existingLike = await prisma.like.findUnique({
@@ -43,15 +41,13 @@ export const toggleCommentLike = async (req: Request, res: Response) => {
         });
 
         if (existingLike) {
-            // Se existe, deleta (descurtir)
             await prisma.like.delete({ where: { id: existingLike.id } });
             res.status(200).json({ message: 'Comment unliked successfully.' });
         } else {
-            // Se não existe, cria (curtir)
             await prisma.like.create({
                 data: { userId, commentId },
             });
-            res.status(201).json({ message: 'Comment liked successfully.' });
+            res.status(200).json({ message: 'Comment liked successfully.' });
         }
     } catch (error) {
         res.status(500).json({ error: 'Could not process comment like action.' });

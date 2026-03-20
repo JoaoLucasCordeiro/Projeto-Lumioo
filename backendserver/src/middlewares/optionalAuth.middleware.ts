@@ -14,6 +14,7 @@ export const optionalAuthenticateToken = (req: AuthenticatedRequest, res: Respon
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as { userId: string };
       req.user = decoded;
     } catch (error) {
+      console.warn('Invalid token in optional auth, proceeding as unauthenticated.');
     }
   }
   next();
