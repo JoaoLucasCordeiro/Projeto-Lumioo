@@ -1,8 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import http from 'http'; 
-import { Server } from 'socket.io'; 
+import http from 'http';
+import { Server } from 'socket.io';
 
 import userRoutes from './routes/user.routes';
 import authRoutes from './routes/auth.routes';
@@ -14,33 +14,48 @@ import projectRoutes from './routes/project.routes';
 import workRoutes from './routes/work.routes';
 import chatRoutes from './routes/chat.routes';
 import { initializeSocket } from './socket';
+import { errorHandler } from './middlewares/errorHandler.middleware';
+import { prisma } from './lib/prisma';
 
 dotenv.config();
 
+if (!process.env.JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET is not set. Exiting.');
+  process.exit(1);
+}
+if (!process.env.FRONTEND_URL) {
+  console.error('FATAL: FRONTEND_URL is not set. Exiting.');
+  process.exit(1);
+}
+
 const app = express();
-const httpServer = http.createServer(app); 
+const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL, 
-    methods: ["GET", "POST"]
-  }
+    origin: process.env.FRONTEND_URL,
+    methods: ['GET', 'POST'],
+  },
 });
 
 initializeSocket(io);
 
 const corsOptions = {
   origin: process.env.FRONTEND_URL,
-  optionsSuccessStatus: 200 
+  optionsSuccessStatus: 200,
 };
 
-app.use(cors(corsOptions)); 
+app.use(cors(corsOptions));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 app.get('/', (req, res) => {
   res.send('Lumioo API rodando com sucesso 🚀');
+});
+
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.use('/api/v1/lumioo', userRoutes);
@@ -51,10 +66,21 @@ app.use('/api/v1/lumioo', likeRoutes);
 app.use('/api/v1/lumioo', savedPostRoutes);
 app.use('/api/v1/lumioo', projectRoutes);
 app.use('/api/v1/lumioo', workRoutes);
-app.use('/api/v1/lumioo', chatRoutes); 
+app.use('/api/v1/lumioo', chatRoutes);
+
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 8080;
 
 httpServer.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
+
+const shutdown = async () => {
+  console.log('Shutting down gracefully...');
+  await prisma.$disconnect();
+  httpServer.close(() => process.exit(0));
+};
+
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

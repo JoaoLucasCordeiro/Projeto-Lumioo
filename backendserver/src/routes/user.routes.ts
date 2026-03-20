@@ -3,6 +3,8 @@ import { Router } from 'express';
 import { createUser, deleteUser, getAllUsers, getUserById, updateUser, getMyProfile, changePassword, getUserProfileByUsername } from '../controllers/user.controller';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { optionalAuthenticateToken } from '../middlewares/optionalAuth.middleware';
+import { validateBody } from '../lib/validate';
+import { createUserSchema } from '../lib/schemas';
 
 const router = Router();
 
@@ -11,12 +13,12 @@ router.get('/profile', authenticateToken, getMyProfile);
 router.put('/profile', authenticateToken, updateUser);
 router.get('/profile/:username', optionalAuthenticateToken, getUserProfileByUsername);
 
-// Rotas públicas 
-router.post('/users', createUser);
+// Rotas públicas
+router.post('/users', validateBody(createUserSchema), createUser);
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserById);
 router.delete('/users/:id', authenticateToken, deleteUser);
-router.put('/profile/password', authenticateToken, changePassword);
+router.post('/profile/password', authenticateToken, changePassword);
 
 
 export default router;
