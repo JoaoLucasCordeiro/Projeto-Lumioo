@@ -1,11 +1,19 @@
 // src/components/shared/Post.tsx
 import { useEffect, useState } from 'react';
-import { Heart, MessageCircle, Bookmark, MoreHorizontal, Clock, Flag, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import {
+  Heart,
+  MessageCircle,
+  Bookmark,
+  MoreHorizontal,
+  Flag,
+  Edit,
+  Trash2,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,26 +21,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useAuth } from '@/contexts/auth.context';
-import { useTimeAgo } from '@/hooks/useTimeAgo'; 
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { useTimeAgo } from '@/hooks/useTimeAgo';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { likePost, savePost, deletePost } from '@/api/posts';
+import { queryKeys } from '@/api/queryKeys';
+import type { InfiniteData } from '@tanstack/react-query';
+import type { FeedPage, PostsPage } from '@/api/posts';
 
 interface PostProps {
   id: string;
   username: string;
-  authorId: string; 
-  userImage: string | null; // A foto pode ser nula
+  authorId: string;
+  userImage: string | null;
   image: string;
   caption: string;
   likes: number;
@@ -40,7 +41,6 @@ interface PostProps {
   timePosted: string;
   isLiked: boolean;
   isSaved: boolean;
-  onUpdate: () => void; 
 }
 
 interface ToastMessage {
@@ -49,7 +49,15 @@ interface ToastMessage {
   type: 'success' | 'error';
 }
 
-function Toast({ message, type, onDismiss }: { message: string, type: 'success' | 'error', onDismiss: () => void }) {
+function Toast({
+  message,
+  type,
+  onDismiss,
+}: {
+  message: string;
+  type: 'success' | 'error';
+  onDismiss: () => void;
+}) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, 3000);
     return () => clearTimeout(timer);
@@ -61,12 +69,27 @@ function Toast({ message, type, onDismiss }: { message: string, type: 'success' 
       initial={{ opacity: 0, y: 50, scale: 0.3 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.5 }}
-      className={`fixed bottom-5 right-5 flex items-center gap-4 rounded-lg px-4 py-3 text-white shadow-lg z-50 ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}
+      className={`fixed bottom-5 right-5 flex items-center gap-3 rounded-xl px-4 py-3 text-white shadow-xl z-[100] ${type === 'success' ? 'bg-slate-800 border border-green-500/30' : 'bg-slate-800 border border-red-500/30'}`}
     >
-      {type === 'success' ? <CheckCircle size={24} /> : <XCircle size={24} />}
-      <p className="font-medium">{message}</p>
+      {type === 'success'
+        ? <CheckCircle size={16} className="text-green-400 shrink-0" />
+        : <XCircle size={16} className="text-red-400 shrink-0" />}
+      <p className="text-sm font-medium text-slate-200">{message}</p>
     </motion.div>
   );
+}
+
+type PageData = InfiniteData<FeedPage> | InfiniteData<PostsPage>;
+
+function updatePostInPages(old: PageData | undefined, postId: string, updater: (p: PostProps) => PostProps): PageData | undefined {
+  if (!old) return old;
+  return {
+    ...old,
+    pages: old.pages.map((page) => ({
+      ...page,
+      posts: page.posts.map((p) => (p.id === postId ? updater(p as unknown as PostProps) : p)),
+    })),
+  };
 }
 
 export function Post({
@@ -81,181 +104,316 @@ export function Post({
   timePosted,
   isLiked,
   isSaved,
-  onUpdate
 }: PostProps) {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const timeAgo = useTimeAgo(timePosted);
+  const qc = useQueryClient();
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
-  
+
   const isOwner = user?.id === authorId;
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ id: Date.now(), message, type });
   };
 
-  const handleLike = async () => {
-    if (!token) return;
-    try {
-      await fetch(`${API_URL}/posts/${id}/like`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      onUpdate();
-    } catch (error) {
-      console.error("Failed to like post:", error);
-    }
-  };
+  const likeMutation = useMutation({
+    mutationFn: () => likePost(id),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: queryKeys.feed.infinite() });
+      await qc.cancelQueries({ queryKey: ['posts'] });
 
-  const handleSave = async () => {
-    if (!token) return;
-    try {
-      await fetch(`${API_URL}/posts/${id}/save`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
+      const previousFeed = qc.getQueryData<PageData>(queryKeys.feed.infinite());
+      const previousPosts = qc.getQueriesData<PageData>({ queryKey: ['posts', 'list'] });
+
+      const likeUpdater = (p: PostProps): PostProps => ({
+        ...p,
+        isLiked: !p.isLiked,
+        likes: p.isLiked ? p.likes - 1 : p.likes + 1,
       });
-      showToast(isSaved ? 'Post removido dos salvos!' : 'Post salvo com sucesso!');
-      onUpdate();
-    } catch (error) {
-      console.error("Failed to save post:", error);
+
+      qc.setQueryData<PageData>(queryKeys.feed.infinite(), (old) =>
+        updatePostInPages(old, id, likeUpdater)
+      );
+      previousPosts.forEach(([key]) => {
+        qc.setQueryData<PageData>(key, (old) => updatePostInPages(old, id, likeUpdater));
+      });
+
+      return { previousFeed, previousPosts };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousFeed) {
+        qc.setQueryData(queryKeys.feed.infinite(), context.previousFeed);
+      }
+      context?.previousPosts?.forEach(([key, data]) => {
+        qc.setQueryData(key, data);
+      });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.feed.infinite() });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: () => savePost(id),
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: queryKeys.feed.infinite() });
+      await qc.cancelQueries({ queryKey: ['posts'] });
+
+      const previousFeed = qc.getQueryData<PageData>(queryKeys.feed.infinite());
+      const previousPosts = qc.getQueriesData<PageData>({ queryKey: ['posts', 'list'] });
+
+      const saveUpdater = (p: PostProps): PostProps => ({ ...p, isSaved: !p.isSaved });
+
+      qc.setQueryData<PageData>(queryKeys.feed.infinite(), (old) =>
+        updatePostInPages(old, id, saveUpdater)
+      );
+      previousPosts.forEach(([key]) => {
+        qc.setQueryData<PageData>(key, (old) => updatePostInPages(old, id, saveUpdater));
+      });
+
+      return { previousFeed, previousPosts };
+    },
+    onError: (_, __, context) => {
+      if (context?.previousFeed) {
+        qc.setQueryData(queryKeys.feed.infinite(), context.previousFeed);
+      }
+      context?.previousPosts?.forEach(([key, data]) => {
+        qc.setQueryData(key, data);
+      });
       showToast('Falha ao salvar o post.', 'error');
-    }
-  };
+    },
+    onSuccess: () => {
+      showToast(isSaved ? 'Post removido dos salvos!' : 'Post salvo com sucesso!');
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.feed.infinite() });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+  });
 
-  const handleDeletePost = async () => {
-    if (!token || !isOwner) return;
-    try {
-      const response = await fetch(`${API_URL}/posts/${id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      if (!response.ok) throw new Error('Falha ao deletar o post.');
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePost(id),
+    onSuccess: () => {
       showToast('Post deletado com sucesso!');
-      onUpdate();
-    } catch (error) {
-      console.error("Failed to delete post:", error);
+      qc.invalidateQueries({ queryKey: queryKeys.feed.infinite() });
+      qc.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: () => {
       showToast('Falha ao deletar o post.', 'error');
-    } finally {
+    },
+    onSettled: () => {
       setIsDeleteDialogOpen(false);
-    }
-  };
+    },
+  });
 
-  const handleEditPost = () => {
-    navigate(`/post/${id}/edit`);
-  };
+  const handleLike = () => likeMutation.mutate();
+  const handleSave = () => saveMutation.mutate();
+  const handleDeletePost = () => deleteMutation.mutate();
+  const handleEditPost = () => navigate(`/post/${id}/edit`);
 
   return (
     <>
       <AnimatePresence>
-        {toast && <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />}
+        {toast && (
+          <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
+        )}
       </AnimatePresence>
 
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
+      <motion.article
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative bg-slate-900/50 backdrop-blur-sm border border-slate-800 rounded-xl overflow-hidden shadow-lg mb-8 hover:border-red-500/30 transition-all"
+        transition={{ duration: 0.4 }}
+        className="group bg-slate-900/60 border border-white/[0.06] rounded-2xl overflow-hidden hover:border-white/[0.12] transition-all duration-300"
       >
-        <div className="absolute top-4 left-4 z-10">
-          <Badge variant="outline" className="bg-red-900/20 border-red-700/50 text-red-400">Novo Post</Badge>
-        </div>
-        <div className="flex items-center justify-between p-6 border-b border-slate-800">
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-12 w-12 border-2 border-red-500/30">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <Link to={`/perfil/${username}`} className="flex items-center gap-3 min-w-0">
+            <Avatar className="h-9 w-9 shrink-0 ring-1 ring-white/[0.08]">
               <AvatarImage src={userImage || undefined} alt={username} />
-              <AvatarFallback className="bg-slate-800 text-red-400 font-bold">{username.charAt(0).toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-slate-800 text-slate-300 text-xs font-semibold">
+                {username.charAt(0).toUpperCase()}
+              </AvatarFallback>
             </Avatar>
-            <div>
-              <Link to={`/perfil/${username}`} className="font-bold text-slate-100 hover:text-red-400 transition-colors">{username}</Link>
-              <div className="flex items-center text-sm text-slate-400 mt-1">
-                <Clock className="h-4 w-4 mr-1 text-red-400" />
-                <span>{timeAgo}</span>
-              </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-100 truncate hover:text-red-400 transition-colors">
+                {username}
+              </p>
+              <p className="text-xs text-slate-500">{timeAgo}</p>
             </div>
-          </div>
+          </Link>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:text-red-400 hover:bg-red-900/10"><MoreHorizontal className="h-5 w-5" /></Button>
+              <button className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors shrink-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700 text-slate-200 w-48">
+            <DropdownMenuContent
+              align="end"
+              className="bg-slate-800 border-white/[0.08] text-slate-200 w-44 rounded-xl"
+            >
               {isOwner ? (
                 <>
-                  <DropdownMenuItem onClick={() => setIsDeleteDialogOpen(true)} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
-                    <Trash2 className="h-4 w-4 mr-2 text-red-400" /><span>Deletar</span>
+                  <DropdownMenuItem
+                    onClick={handleEditPost}
+                    className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100"
+                  >
+                    <Edit className="h-4 w-4 text-slate-400" />
+                    <span>Editar</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleEditPost} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
-                    <Edit className="h-4 w-4 mr-2 text-red-400" /><span>Editar</span>
+                  <DropdownMenuItem
+                    onClick={() => setIsDeleteDialogOpen(true)}
+                    className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-red-500/10 focus:text-red-400 text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Deletar</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem onClick={handleSave} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" /><span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
+                  <DropdownMenuSeparator className="bg-white/[0.06]" />
+                  <DropdownMenuItem
+                    onClick={handleSave}
+                    className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100"
+                  >
+                    <Bookmark className="h-4 w-4 text-slate-400" />
+                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
                   </DropdownMenuItem>
                 </>
               ) : (
                 <>
-                  <DropdownMenuItem onClick={handleSave} className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
-                    <Bookmark className="h-4 w-4 mr-2 text-red-400" /><span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
+                  <DropdownMenuItem
+                    onClick={handleSave}
+                    className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100"
+                  >
+                    <Bookmark className="h-4 w-4 text-slate-400" />
+                    <span>{isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator className="bg-slate-700" />
-                  <DropdownMenuItem className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400">
-                    <Flag className="h-4 w-4 mr-2 text-red-400" /><span>Denunciar</span>
+                  <DropdownMenuSeparator className="bg-white/[0.06]" />
+                  <DropdownMenuItem className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100">
+                    <Flag className="h-4 w-4 text-slate-400" />
+                    <span>Denunciar</span>
                   </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <Link to={`/post/${id}`}>
-          <div className="relative group overflow-hidden">
-            <motion.div whileHover={{ scale: 1.02 }} transition={{ duration: 0.3 }} className="aspect-square">
-              <img src={image} alt={caption} className="w-full h-full object-cover" />
-            </motion.div>
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-6">
-              <p className="text-slate-100 text-lg font-medium">{caption}</p>
-            </div>
+
+        {/* Image */}
+        <Link to={`/post/${id}`} className="block">
+          <div className="aspect-square overflow-hidden bg-slate-800">
+            <img
+              src={image}
+              alt={caption}
+              className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+            />
           </div>
         </Link>
-        <div className="p-6">
-          <div className="flex justify-between mb-4">
-            <div className="flex space-x-4">
-              <Button variant="ghost" size="icon" className={`${isLiked ? 'text-red-500' : 'text-slate-400'} hover:bg-transparent`} onClick={handleLike}>
-                <motion.div whileTap={{ scale: 0.9 }}><Heart className={`h-6 w-6 ${isLiked ? 'fill-current' : ''}`} /></motion.div>
-              </Button>
-              <Button variant="ghost" size="icon" className="text-slate-400 hover:bg-transparent">
-                <MessageCircle className="h-6 w-6" />
-              </Button>
-            </div>
-            <Button variant="ghost" size="icon" className={`${isSaved ? 'text-red-400' : 'text-slate-400'} hover:bg-transparent`} onClick={handleSave}>
-              <Bookmark className={`h-6 w-6 ${isSaved ? 'fill-current' : ''}`} />
-            </Button>
-          </div>
-          <motion.div whileHover={{ x: 5 }} className="text-sm font-bold text-slate-100 mb-3">{likes.toLocaleString()} curtidas</motion.div>
-          <div className="mb-3">
-            <Link to={`/perfil/${username}`} className="font-bold text-slate-100 hover:text-red-400 transition-colors mr-2">{username}</Link>
-            <span className="text-slate-300">{caption}</span>
-          </div>
-          <motion.div whileHover={{ x: 5 }}>
-            <Link to={`/post/${id}`} className="text-sm text-slate-400 hover:text-red-400 transition-colors">Ver todos os {comments.toLocaleString()} comentários</Link>
-          </motion.div>
-        </div>
-      </motion.div>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-slate-800 border-slate-700 text-slate-200">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-400">Você tem certeza?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Esta ação não pode ser desfeita. Isso irá deletar permanentemente o seu post.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-200 text-slate-700 hover:bg-slate-300 border-slate-200">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePost} className="bg-red-600 hover:bg-red-700 text-white">Deletar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {/* Actions */}
+        <div className="px-4 pt-3 pb-1 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleLike}
+              className="flex items-center gap-1.5 group/like"
+            >
+              <motion.div whileTap={{ scale: 0.8 }}>
+                <Heart
+                  className={`h-5 w-5 transition-colors ${
+                    isLiked
+                      ? 'text-red-500 fill-red-500'
+                      : 'text-slate-400 group-hover/like:text-slate-200'
+                  }`}
+                />
+              </motion.div>
+              <span className={`text-sm font-medium tabular-nums ${isLiked ? 'text-red-500' : 'text-slate-400'}`}>
+                {likes.toLocaleString()}
+              </span>
+            </button>
+
+            <Link
+              to={`/post/${id}`}
+              className="flex items-center gap-1.5 group/comment"
+            >
+              <MessageCircle className="h-5 w-5 text-slate-400 group-hover/comment:text-slate-200 transition-colors" />
+              <span className="text-sm font-medium text-slate-400 tabular-nums">
+                {comments.toLocaleString()}
+              </span>
+            </Link>
+          </div>
+
+          <button
+            onClick={handleSave}
+            className="group/save"
+          >
+            <motion.div whileTap={{ scale: 0.8 }}>
+              <Bookmark
+                className={`h-5 w-5 transition-colors ${
+                  isSaved
+                    ? 'text-red-400 fill-red-400'
+                    : 'text-slate-400 group-hover/save:text-slate-200'
+                }`}
+              />
+            </motion.div>
+          </button>
+        </div>
+
+        {/* Caption */}
+        <div className="px-4 pb-4">
+          <p className="text-sm text-slate-300 leading-relaxed">
+            <Link
+              to={`/perfil/${username}`}
+              className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
+            >
+              {username}
+            </Link>
+            {caption}
+          </p>
+          {comments > 0 && (
+            <Link
+              to={`/post/${id}`}
+              className="mt-1.5 inline-block text-xs text-slate-500 hover:text-red-400 transition-colors"
+            >
+              Ver todos os {comments.toLocaleString()} comentários
+            </Link>
+          )}
+        </div>
+      </motion.article>
+
+      {/* Delete confirmation — plain overlay, no Radix portal */}
+      {isDeleteDialogOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60"
+          onClick={() => setIsDeleteDialogOpen(false)}
+        >
+          <div
+            className="bg-slate-900 border border-white/[0.08] rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-slate-100 mb-1">Deletar post?</h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Esta ação é permanente e não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-slate-700 text-slate-200 hover:bg-slate-600 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleDeletePost}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deleteMutation.isPending ? 'Deletando…' : 'Deletar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
