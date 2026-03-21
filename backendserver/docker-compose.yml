@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lumioo_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lumioo
+      POSTGRES_PASSWORD: lumioo123
+      POSTGRES_DB: lumioo_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lumioo_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@lumioo.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - "5051:80"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
