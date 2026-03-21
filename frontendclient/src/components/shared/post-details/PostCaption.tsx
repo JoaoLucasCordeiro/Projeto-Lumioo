@@ -1,6 +1,7 @@
+// src/components/shared/post-details/PostCaption.tsx
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { motion } from 'framer-motion';
 import type { PostDetailsData } from '@/types/post';
 
 interface PostCaptionProps {
@@ -10,26 +11,42 @@ interface PostCaptionProps {
 
 export function PostCaption({ post, onLikePost }: PostCaptionProps) {
   return (
-    <div className="p-4 border-b border-slate-700">
-      <p className="text-slate-300 whitespace-pre-line">
-        <Link to={`/perfil/${post.username}`} className="font-bold text-slate-100 hover:text-red-400 mr-2">
+    <div className="px-4 py-3 border-b border-white/[0.06]">
+      <p className="text-sm text-slate-300 leading-relaxed">
+        <Link
+          to={`/perfil/${post.username}`}
+          className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
+        >
           {post.username}
         </Link>
         {post.caption}
       </p>
-      <div className="flex items-center mt-4 space-x-4">
-        <Button 
-          onClick={onLikePost} 
-          variant="ghost" 
-          className={`flex items-center space-x-1 ${post.isLiked ? 'text-red-500' : 'text-slate-400'} hover:bg-transparent`}
+
+      <div className="flex items-center gap-4 mt-3">
+        <button
+          onClick={onLikePost}
+          className="flex items-center gap-1.5 group/like"
         >
-          <Heart className={`h-5 w-5 ${post.isLiked ? 'fill-current' : ''}`} />
-          <span>{post.likes.toLocaleString()}</span>
-        </Button>
-        <Button variant="ghost" className="flex items-center space-x-1 text-slate-400 hover:bg-transparent">
-          <MessageCircle className="h-5 w-5" />
-          <span>{post.comments.length.toLocaleString()}</span>
-        </Button>
+          <motion.div whileTap={{ scale: 0.8 }} transition={{ duration: 0.1 }}>
+            <Heart
+              className={`h-4 w-4 transition-colors ${
+                post.isLiked
+                  ? 'text-red-500 fill-red-500'
+                  : 'text-slate-400 group-hover/like:text-slate-200'
+              }`}
+            />
+          </motion.div>
+          <span className={`text-sm font-medium tabular-nums ${post.isLiked ? 'text-red-500' : 'text-slate-400'}`}>
+            {post.likes.toLocaleString()}
+          </span>
+        </button>
+
+        <div className="flex items-center gap-1.5 text-slate-400">
+          <MessageCircle className="h-4 w-4" />
+          <span className="text-sm font-medium tabular-nums">
+            {post.comments.length.toLocaleString()}
+          </span>
+        </div>
       </div>
     </div>
   );

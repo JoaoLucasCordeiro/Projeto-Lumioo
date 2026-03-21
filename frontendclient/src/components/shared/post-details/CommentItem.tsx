@@ -1,10 +1,14 @@
+// src/components/shared/post-details/CommentItem.tsx
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { Heart, MoreHorizontal, Edit, Trash2, Flag } from 'lucide-react';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { useTimeAgo } from '@/hooks/useTimeAgo'; 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useTimeAgo } from '@/hooks/useTimeAgo';
 import type { Comment } from '@/types/post';
 
 interface CommentItemProps {
@@ -15,67 +19,91 @@ interface CommentItemProps {
   onLikeComment: (commentId: string) => void;
 }
 
-export function CommentItem({ comment, isOwner, onStartEdit, onStartDelete, onLikeComment }: CommentItemProps) {
-  const timeAgo = useTimeAgo(comment.timePosted); 
+export function CommentItem({
+  comment,
+  isOwner,
+  onStartEdit,
+  onStartDelete,
+  onLikeComment,
+}: CommentItemProps) {
+  const timeAgo = useTimeAgo(comment.timePosted);
 
   return (
-    <motion.div 
-      initial={{ opacity: 0, x: 10 }} 
-      animate={{ opacity: 1, x: 0 }} 
-      exit={{ opacity: 0, x: -10, height: 0, marginBottom: 0, padding: 0 }}
-      transition={{ duration: 0.3 }} 
-      className="flex items-start space-x-3 group"
-    >
-      <Avatar className="h-9 w-9 flex-shrink-0 border border-slate-600">
+    <div className="flex items-start gap-3 group">
+      <Avatar className="h-7 w-7 shrink-0 ring-1 ring-white/[0.06]">
         <AvatarImage src={comment.userImage} alt={comment.username} />
-        <AvatarFallback className="bg-slate-700 text-slate-300">
+        <AvatarFallback className="bg-slate-800 text-slate-400 text-xs font-semibold">
           {comment.username.charAt(0).toUpperCase()}
         </AvatarFallback>
       </Avatar>
+
       <div className="flex-1 min-w-0">
-        <div className="flex items-baseline">
-          <Link to={`/perfil/${comment.username}`} className="font-bold text-slate-100 hover:text-red-400 mr-2 truncate">
+        <p className="text-sm text-slate-300 leading-relaxed break-words">
+          <Link
+            to={`/perfil/${comment.username}`}
+            className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
+          >
             {comment.username}
           </Link>
-          {/* 3. Exibir a data formatada */}
-          <span className="text-xs text-slate-500 flex-shrink-0">{timeAgo}</span>
-        </div>
-        <p className="text-slate-300 mt-1 break-words">{comment.text}</p>
-        <div className="flex items-center mt-2 space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className={`text-xs ${comment.isLiked ? 'text-red-500' : 'text-slate-400'} hover:bg-transparent h-6`}
+          {comment.text}
+        </p>
+        <div className="flex items-center gap-3 mt-1">
+          <span className="text-xs text-slate-500">{timeAgo}</span>
+          <button
             onClick={() => onLikeComment(comment.id)}
+            className="flex items-center gap-1 group/like"
           >
-            <Heart className={`h-3 w-3 mr-1 ${comment.isLiked ? 'fill-current' : ''}`} />
-            <span>{comment.likes.toLocaleString()}</span>
-          </Button>
+            <Heart
+              className={`h-3 w-3 transition-colors ${
+                comment.isLiked
+                  ? 'text-red-500 fill-red-500'
+                  : 'text-slate-500 group-hover/like:text-slate-300'
+              }`}
+            />
+            {comment.likes > 0 && (
+              <span className={`text-xs tabular-nums ${comment.isLiked ? 'text-red-500' : 'text-slate-500'}`}>
+                {comment.likes.toLocaleString()}
+              </span>
+            )}
+          </button>
         </div>
       </div>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-400 hover:bg-red-900/10 h-6 w-6 flex-shrink-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <button className="p-1 rounded-md text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-all shrink-0 mt-0.5">
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-slate-800 border-slate-700 text-slate-200">
+        <DropdownMenuContent
+          align="end"
+          className="bg-slate-800 border-white/[0.08] text-slate-200 w-36 rounded-xl"
+        >
           {isOwner ? (
             <>
-              <DropdownMenuItem onClick={() => onStartEdit(comment)} className="focus:bg-slate-700 focus:text-red-400 cursor-pointer">
-                <Edit className="h-4 w-4 mr-2 text-red-400" /> Editar
+              <DropdownMenuItem
+                onClick={() => onStartEdit(comment)}
+                className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100 text-sm"
+              >
+                <Edit className="h-3.5 w-3.5 text-slate-400" />
+                Editar
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStartDelete(comment)} className="focus:bg-slate-700 focus:text-red-400 cursor-pointer">
-                <Trash2 className="h-4 w-4 mr-2 text-red-400" /> Deletar
+              <DropdownMenuItem
+                onClick={() => onStartDelete(comment)}
+                className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-red-500/10 focus:text-red-400 text-red-400 text-sm"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Deletar
               </DropdownMenuItem>
             </>
           ) : (
-            <DropdownMenuItem className="focus:bg-slate-700 focus:text-red-400 cursor-pointer">
-              <Flag className="h-4 w-4 mr-2 text-red-400" /> Denunciar
+            <DropdownMenuItem className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100 text-sm">
+              <Flag className="h-3.5 w-3.5 text-slate-400" />
+              Denunciar
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
-    </motion.div>
+    </div>
   );
 }
