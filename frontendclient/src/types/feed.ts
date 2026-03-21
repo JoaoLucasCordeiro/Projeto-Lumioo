@@ -1,8 +1,8 @@
 export interface Post {
   id: string;
   username: string;
-  authorId: string; 
-  userImage: string;
+  authorId: string;
+  userImage: string | null;
   image: string;
   caption: string;
   likes: number;
@@ -19,4 +19,14 @@ export interface FeedHeaderProps {
 
 export interface PostsListProps {
   posts: Post[];
+}
+
+export interface FeedPage {
+  posts: Post[];
+  nextCursor: string | null;
+}
+
+export interface PostsPage {
+  posts: Post[];
+  nextCursor: string | null;
 }

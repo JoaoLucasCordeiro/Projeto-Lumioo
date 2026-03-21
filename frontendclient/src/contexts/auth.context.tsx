@@ -2,6 +2,7 @@ import { clearAuthData, getToken, getUser, saveAuthData, updateLocalUser } from 
 import { createContext, useState, useContext, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { queryClient } from '@/lib/queryClient';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -58,8 +59,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       saveAuthData(data.token, data.user);
       setUser(data.user);
       setToken(data.token);
-      
-      navigate('/feed'); 
+      await queryClient.invalidateQueries();
+
+      navigate('/feed');
     } catch (err: any) {
       setError(err.message);
       throw err; 
@@ -69,10 +71,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    queryClient.clear();
     clearAuthData();
     setUser(null);
     setToken(null);
-    navigate('/login'); 
+    navigate('/login');
   };
 
   const updateUserContext = (newUserData: Partial<User>) => {
