@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, Settings, Lock, Bell, Eye, EyeOff, Globe, HelpCircle, LogOut, CheckCircle, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { changePassword } from "@/api/profile";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -12,8 +14,6 @@ import { useAuth } from "@/contexts/auth.context";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 function Toast({ message, type, onDismiss }: { message: string, type: 'success' | 'error', onDismiss: () => void }) {
   useEffect(() => {
@@ -36,7 +36,7 @@ function Toast({ message, type, onDismiss }: { message: string, type: 'success' 
 }
 
 export function SettingsPage() {
-  const { token, logout } = useAuth();
+  const { logout } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -50,25 +50,19 @@ export function SettingsPage() {
     setToast({ id: Date.now(), message, type });
   };
 
-  const handleChangePassword = async () => {
-    if (!token) return;
-    try {
-      const response = await fetch(`${API_URL}/profile/password`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(passwordData)
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Falha ao alterar a senha.");
-
+  const passwordMutation = useMutation({
+    mutationFn: () => changePassword(passwordData),
+    onSuccess: () => {
       showToast("Senha alterada com sucesso!");
       setPasswordData({ currentPassword: '', newPassword: '' });
-    } catch (error: any) {
+    },
+    onError: (error: Error) => {
       showToast(error.message, 'error');
-    }
+    },
+  });
+
+  const handleChangePassword = () => {
+    passwordMutation.mutate();
   };
 
   return (

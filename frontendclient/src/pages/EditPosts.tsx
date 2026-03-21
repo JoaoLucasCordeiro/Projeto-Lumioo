@@ -7,46 +7,46 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/auth.context";
 import { FeedLayout } from "@/components/shared/feed/FeedLayout";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { fetchPostById, updatePost } from "@/api/posts";
+import { queryKeys } from "@/api/queryKeys";
 
 export function EditPostPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const qc = useQueryClient();
 
   const [caption, setCaption] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [newHashtag, setNewHashtag] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  const { data: post, isLoading } = useQuery({
+    queryKey: queryKeys.posts.detail(id!),
+    queryFn: () => fetchPostById(id!),
+    enabled: !!id,
+  });
 
   useEffect(() => {
-    const fetchPostData = async () => {
-      if (!id || !token) return;
-      try {
-        const response = await fetch(`${API_URL}/posts/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error("Post não encontrado ou você não tem permissão para editá-lo.");
-        
-        const post = await response.json();
-        setCaption(post.caption);
-        setImage(post.image);
-        setLocation(post.location || "");
-        setHashtags(post.hashtags || []);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPostData();
-  }, [id, token]);
+    if (post && !initialized) {
+      setCaption(post.caption);
+      setImage(post.image);
+      setLocation((post as any).location || "");
+      setHashtags((post as any).hashtags || []);
+      setInitialized(true);
+    }
+  }, [post, initialized]);
+
+  const mutation = useMutation({
+    mutationFn: () => updatePost(id!, { caption, image, location, hashtags }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['posts'] });
+      navigate('/feed');
+    },
+  });
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,42 +65,20 @@ export function EditPostPage() {
   };
 
   const handleRemoveHashtag = (tagToRemove: string) => {
-    setHashtags(hashtags.filter(tag => tag !== tagToRemove));
+    setHashtags(hashtags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token || !id) return;
-
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-        const response = await fetch(`${API_URL}/posts/${id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ caption, image, location, hashtags })
-        });
-
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Não foi possível atualizar o post.");
-        
-        navigate('/feed');
-    } catch (err: any) {
-        setError(err.message);
-    } finally {
-        setIsLoading(false);
-    }
+    if (!id) return;
+    mutation.mutate();
   };
 
   if (isLoading) {
     return (
-        <FeedLayout mobileSidebarOpen={false} setMobileSidebarOpen={() => {}}>
-            <div className="text-white text-center p-10">Carregando dados do post...</div>
-        </FeedLayout>
+      <FeedLayout mobileSidebarOpen={false} setMobileSidebarOpen={() => {}}>
+        <div className="text-white text-center p-10">Carregando dados do post...</div>
+      </FeedLayout>
     );
   }
 
@@ -114,26 +92,43 @@ export function EditPostPage() {
       >
         <div className="flex items-center justify-between mb-8 pt-12 md:pt-0">
           <h2 className="text-2xl font-bold text-slate-100">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Editar Post</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">
+              Editar Post
+            </span>
           </h2>
           <Button
             type="submit"
             form="edit-post-form"
-            disabled={!image || isLoading}
+            disabled={!image || mutation.isPending}
             className="bg-[#ff3131] hover:bg-red-600 text-white font-bold"
           >
-            {isLoading ? "Salvando..." : "Salvar Alterações"}
+            {mutation.isPending ? "Salvando..." : "Salvar Alterações"}
           </Button>
         </div>
 
         <form id="edit-post-form" onSubmit={handleSubmit}>
           <div className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50">
             <div className="p-6 border-b border-slate-700/50">
-              <Label htmlFor="post-image" className="text-lg font-semibold text-slate-100 mb-3 block">Imagem do Post</Label>
+              <Label
+                htmlFor="post-image"
+                className="text-lg font-semibold text-slate-100 mb-3 block"
+              >
+                Imagem do Post
+              </Label>
               {image ? (
                 <div className="relative group">
-                  <img src={image} alt="Preview" className="rounded-lg object-cover w-full h-64 md:h-80 border border-slate-700" />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => setImage(null)} className="absolute top-4 right-4 bg-slate-900/80 hover:bg-slate-800/90 text-slate-100">
+                  <img
+                    src={image}
+                    alt="Preview"
+                    className="rounded-lg object-cover w-full h-64 md:h-80 border border-slate-700"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setImage(null)}
+                    className="absolute top-4 right-4 bg-slate-900/80 hover:bg-slate-800/90 text-slate-100"
+                  >
                     <X className="h-5 w-5" />
                   </Button>
                 </div>
@@ -144,49 +139,115 @@ export function EditPostPage() {
                     <div className="text-slate-300 font-medium text-lg">Selecione uma imagem</div>
                     <div className="text-slate-500 text-sm mt-1">Ou arraste e solte aqui</div>
                   </Label>
-                  <Input id="post-image" type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  <Input
+                    id="post-image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
                 </div>
               )}
             </div>
             <div className="p-6 space-y-6">
               <div>
-                <Label htmlFor="caption" className="text-lg font-semibold text-slate-100 mb-3 block">Legenda</Label>
+                <Label htmlFor="caption" className="text-lg font-semibold text-slate-100 mb-3 block">
+                  Legenda
+                </Label>
                 <div className="relative">
-                  <Textarea id="caption" value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Compartilhe seus pensamentos..." className="min-h-[120px] bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500" />
+                  <Textarea
+                    id="caption"
+                    value={caption}
+                    onChange={(e) => setCaption(e.target.value)}
+                    placeholder="Compartilhe seus pensamentos..."
+                    className="min-h-[120px] bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500"
+                  />
                   <div className="absolute right-3 bottom-3">
-                    <Button type="button" variant="ghost" size="icon" className="text-slate-400 hover:bg-slate-700/50"><Smile className="h-5 w-5" /></Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-slate-400 hover:bg-slate-700/50"
+                    >
+                      <Smile className="h-5 w-5" />
+                    </Button>
                   </div>
                 </div>
               </div>
               <div>
-                <Label htmlFor="location" className="text-lg font-semibold text-slate-100 mb-3 block">Localização (opcional)</Label>
+                <Label
+                  htmlFor="location"
+                  className="text-lg font-semibold text-slate-100 mb-3 block"
+                >
+                  Localização (opcional)
+                </Label>
                 <div className="relative">
-                  <Input id="location" type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Onde você está?" className="bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500 pl-10" />
-                  <div className="absolute left-3 top-3"><MapPin className="h-5 w-5 text-slate-400" /></div>
+                  <Input
+                    id="location"
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Onde você está?"
+                    className="bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500 pl-10"
+                  />
+                  <div className="absolute left-3 top-3">
+                    <MapPin className="h-5 w-5 text-slate-400" />
+                  </div>
                 </div>
               </div>
               <div>
                 <Label className="text-lg font-semibold text-slate-100 mb-3 block">Hashtags</Label>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {hashtags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-700/50 group">
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className="bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-700/50 group"
+                    >
                       #{tag}
-                      <button type="button" onClick={() => handleRemoveHashtag(tag)} className="ml-1.5 text-slate-400 hover:text-slate-200"><X className="h-3 w-3" /></button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHashtag(tag)}
+                        className="ml-1.5 text-slate-400 hover:text-slate-200"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
                 </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
-                    <Input type="text" value={newHashtag} onChange={(e) => setNewHashtag(e.target.value.replace(/\s/g, ''))} placeholder="Adicionar hashtag" className="bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500 pl-9" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddHashtag(); } }} />
-                    <div className="absolute left-3 top-3"><Hash className="h-4 w-4 text-slate-400" /></div>
+                    <Input
+                      type="text"
+                      value={newHashtag}
+                      onChange={(e) => setNewHashtag(e.target.value.replace(/\s/g, ''))}
+                      placeholder="Adicionar hashtag"
+                      className="bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500 pl-9"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddHashtag();
+                        }
+                      }}
+                    />
+                    <div className="absolute left-3 top-3">
+                      <Hash className="h-4 w-4 text-slate-400" />
+                    </div>
                   </div>
-                  <Button type="button" onClick={handleAddHashtag} disabled={!newHashtag.trim()} className="bg-[#ff3131] hover:bg-red-600 text-white transition-colors">Adicionar</Button>
+                  <Button
+                    type="button"
+                    onClick={handleAddHashtag}
+                    disabled={!newHashtag.trim()}
+                    className="bg-[#ff3131] hover:bg-red-600 text-white transition-colors"
+                  >
+                    Adicionar
+                  </Button>
                 </div>
               </div>
-              {error && (
+              {mutation.isError && (
                 <div className="flex items-center p-3 text-sm text-red-400 bg-red-900/20 border border-red-800/50 rounded-lg">
                   <AlertCircle className="flex-shrink-0 inline w-5 h-5 mr-3" />
-                  <div>{error}</div>
+                  <div>{(mutation.error as Error).message}</div>
                 </div>
               )}
             </div>

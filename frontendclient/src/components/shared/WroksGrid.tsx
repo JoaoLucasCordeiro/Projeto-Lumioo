@@ -14,12 +14,11 @@ interface WorksGridProps {
     fileUrl: string;
     image: string;
   }>;
-  onUpdate: () => void; 
 }
 
-export function WorksGrid({ works, onUpdate }: WorksGridProps) {
+export function WorksGrid({ works }: WorksGridProps) {
   if (works.length === 0) {
-    return null; 
+    return null;
   }
 
   return (
@@ -31,7 +30,7 @@ export function WorksGrid({ works, onUpdate }: WorksGridProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: index * 0.1 }}
         >
-          <WorkCard work={work} onUpdate={onUpdate} /> 
+          <WorkCard work={work} />
         </motion.div>
       ))}
     </div>

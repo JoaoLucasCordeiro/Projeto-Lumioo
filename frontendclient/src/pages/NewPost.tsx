@@ -8,21 +8,28 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { FeedLayout } from "@/components/shared/feed/FeedLayout";
-import { useAuth } from "@/contexts/auth.context";
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createPost } from "@/api/posts";
 
 export function NewPostPage() {
   const navigate = useNavigate();
-  const { token } = useAuth(); 
+  const qc = useQueryClient();
 
   const [caption, setCaption] = useState("");
   const [image, setImage] = useState<string | null>(null);
   const [location, setLocation] = useState("");
   const [hashtags, setHashtags] = useState<string[]>([]);
   const [newHashtag, setNewHashtag] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); 
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      createPost({ caption, image: image!, location: location || null, hashtags }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['feed'] });
+      navigate('/feed');
+    },
+  });
 
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -43,69 +50,34 @@ export function NewPostPage() {
   };
 
   const handleRemoveHashtag = (tagToRemove: string) => {
-    setHashtags(hashtags.filter(tag => tag !== tagToRemove));
+    setHashtags(hashtags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!image) {
-        setError("Por favor, selecione uma imagem para o post.");
-        return;
+      setFormError("Por favor, selecione uma imagem para o post.");
+      return;
     }
-    if (!token) {
-        setError("Você precisa estar logado para criar um post.");
-        return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-        const response = await fetch(`${API_URL}/posts`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                caption,
-                image,
-                location: location || null,
-                hashtags,
-            })
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.error || "Não foi possível criar o post.");
-        }
-        
-        navigate('/feed');
-
-    } catch (err: any) {
-        setError(err.message);
-    } finally {
-        setIsLoading(false);
-    }
+    setFormError(null);
+    mutation.mutate();
   };
 
+  const error = formError || (mutation.isError ? (mutation.error as Error).message : null);
+  const isLoading = mutation.isPending;
+
   return (
-    <FeedLayout 
-      mobileSidebarOpen={false} 
-      setMobileSidebarOpen={() => {}}
-    >
+    <FeedLayout mobileSidebarOpen={false} setMobileSidebarOpen={() => {}}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-4xl mx-auto"
       >
-        {/* Cabeçalho Mobile */}
         <div className="md:hidden flex items-center justify-between mb-8 pt-12">
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => navigate('/feed')}
             className="text-slate-400 hover:text-slate-200"
           >
@@ -113,21 +85,22 @@ export function NewPostPage() {
             Cancelar
           </Button>
           <h2 className="text-xl font-bold text-slate-100">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">Novo Post</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131]">
+              Novo Post
+            </span>
           </h2>
         </div>
 
-        {/* Cabeçalho Desktop */}
         <div className="hidden md:flex items-center justify-between mb-8">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             onClick={() => navigate('/feed')}
             className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
           >
             <X className="h-4 w-4 mr-2" />
             Voltar para o feed
           </Button>
-          
+
           <Button
             type="submit"
             form="new-post-form"
@@ -140,17 +113,19 @@ export function NewPostPage() {
 
         <form id="new-post-form" onSubmit={handleSubmit}>
           <div className="bg-slate-800/50 rounded-lg overflow-hidden border border-slate-700/50">
-            {/* Área de upload de imagem */}
             <div className="p-6 border-b border-slate-700/50">
-              <Label htmlFor="post-image" className="text-lg font-semibold text-slate-100 mb-3 block">
+              <Label
+                htmlFor="post-image"
+                className="text-lg font-semibold text-slate-100 mb-3 block"
+              >
                 Imagem do Post
               </Label>
-              
+
               {image ? (
                 <div className="relative group">
-                  <img 
-                    src={image} 
-                    alt="Preview" 
+                  <img
+                    src={image}
+                    alt="Preview"
                     className="rounded-lg object-cover w-full h-64 md:h-80 border border-slate-700"
                   />
                   <Button
@@ -181,9 +156,7 @@ export function NewPostPage() {
               )}
             </div>
 
-            {/* Formulário */}
             <div className="p-6 space-y-6">
-              {/* Campo de legenda */}
               <div>
                 <Label htmlFor="caption" className="text-lg font-semibold text-slate-100 mb-3 block">
                   Legenda
@@ -209,9 +182,11 @@ export function NewPostPage() {
                 </div>
               </div>
 
-              {/* Localização */}
               <div>
-                <Label htmlFor="location" className="text-lg font-semibold text-slate-100 mb-3 block">
+                <Label
+                  htmlFor="location"
+                  className="text-lg font-semibold text-slate-100 mb-3 block"
+                >
                   Localização (opcional)
                 </Label>
                 <div className="relative">
@@ -229,20 +204,17 @@ export function NewPostPage() {
                 </div>
               </div>
 
-              {/* Hashtags */}
               <div>
-                <Label className="text-lg font-semibold text-slate-100 mb-3 block">
-                  Hashtags
-                </Label>
+                <Label className="text-lg font-semibold text-slate-100 mb-3 block">Hashtags</Label>
                 <div className="flex flex-wrap gap-2 mb-3">
                   {hashtags.map((tag) => (
-                    <Badge 
+                    <Badge
                       key={tag}
                       variant="outline"
                       className="bg-slate-800/50 border-slate-700 text-slate-300 hover:bg-slate-700/50 group"
                     >
                       #{tag}
-                      <button 
+                      <button
                         type="button"
                         onClick={() => handleRemoveHashtag(tag)}
                         className="ml-1.5 text-slate-400 hover:text-slate-200"
@@ -262,8 +234,8 @@ export function NewPostPage() {
                       className="bg-slate-800/30 border-slate-700 text-slate-100 focus-visible:ring-red-500 pl-9"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddHashtag();
+                          e.preventDefault();
+                          handleAddHashtag();
                         }
                       }}
                     />
@@ -281,8 +253,7 @@ export function NewPostPage() {
                   </Button>
                 </div>
               </div>
-              
-              {/* Exibição de Erro */}
+
               {error && (
                 <div className="flex items-center p-3 text-sm text-red-400 bg-red-900/20 border border-red-800/50 rounded-lg">
                   <AlertCircle className="flex-shrink-0 inline w-5 h-5 mr-3" />
@@ -290,7 +261,6 @@ export function NewPostPage() {
                 </div>
               )}
 
-              {/* Botão de publicar (mobile) */}
               <div className="md:hidden pt-4">
                 <Button
                   type="submit"

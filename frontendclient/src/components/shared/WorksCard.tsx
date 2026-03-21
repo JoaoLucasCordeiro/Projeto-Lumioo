@@ -36,10 +36,9 @@ interface WorkCardProps {
     downloads: number;
     image: string;
   };
-  onUpdate: () => void;
 }
 
-export function WorkCard({ work, onUpdate }: WorkCardProps) {
+export function WorkCard({ work }: WorkCardProps) {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
@@ -72,7 +71,6 @@ export function WorkCard({ work, onUpdate }: WorkCardProps) {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      onUpdate();
     } catch (error) {
       console.error("Download error:", error);
     }

@@ -65,9 +65,9 @@ export default function ExploreProjects() {
         }
         
         const data = await response.json();
-        
+
         // Adicionar flags isNew e isTrending baseadas na data e popularidade
-        const enhancedProjects = data.map((project: Project) => ({
+        const enhancedProjects = (data.projects ?? []).map((project: Project) => ({
           ...project,
           // Projeto é considerado "novo" se foi criado nos últimos 30 dias
           isNew: new Date().getTime() - new Date(project.year).getTime() < 30 * 24 * 60 * 60 * 1000,
