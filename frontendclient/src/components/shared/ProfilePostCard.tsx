@@ -1,158 +1,118 @@
+// src/components/shared/ProfilePostCard.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, MoreHorizontal, Edit, Trash2, Bookmark } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from '@/contexts/auth.context';
 import type { Post } from '@/types/feed';
-
-const API_URL = import.meta.env.VITE_API_URL;
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { likePost, savePost, deletePost } from '@/api/posts';
+import { queryKeys } from '@/api/queryKeys';
 
 interface ProfilePostCardProps {
   post: Post;
   isOwner: boolean;
-  onUpdate: () => void;
 }
 
-export function ProfilePostCard({ post, isOwner, onUpdate }: ProfilePostCardProps) {
+export function ProfilePostCard({ post, isOwner }: ProfilePostCardProps) {
   const navigate = useNavigate();
-  const { token } = useAuth();
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
+  const qc = useQueryClient();
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
-  const handleLike = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!token) return;
-    try {
-      await fetch(`${API_URL}/posts/${post.id}/like`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      onUpdate(); 
-    } catch (error) {
-      console.error("Failed to like post:", error);
-    }
+  const invalidateProfile = () => {
+    qc.invalidateQueries({ queryKey: queryKeys.profile.own() });
   };
 
-  const handleSave = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!token) return;
-    try {
-      await fetch(`${API_URL}/posts/${post.id}/save`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      onUpdate(); 
-    } catch (error) {
-      console.error("Failed to save post:", error);
-    }
-  };
+  const likeMutation = useMutation({
+    mutationFn: () => likePost(post.id),
+    onSuccess: invalidateProfile,
+  });
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDeleteDialogOpen(true);
-  };
+  const saveMutation = useMutation({
+    mutationFn: () => savePost(post.id),
+    onSuccess: invalidateProfile,
+  });
 
-  const handleConfirmDelete = async () => {
-    if (!token || !isOwner) return;
-    try {
-      await fetch(`${API_URL}/posts/${post.id}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      onUpdate();
-    } catch (error) {
-      console.error("Failed to delete post:", error);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePost(post.id),
+    onSuccess: () => {
+      invalidateProfile();
+      qc.invalidateQueries({ queryKey: queryKeys.feed.infinite() });
+    },
+    onSettled: () => setIsDeleteOpen(false),
+  });
 
   return (
     <>
-      <div 
-        className="relative aspect-square overflow-hidden rounded-lg group cursor-pointer"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
+      <div
+        className="relative aspect-square overflow-hidden rounded-xl group cursor-pointer bg-slate-800"
         onClick={() => navigate(`/post/${post.id}`)}
       >
         <img
           src={post.image}
           alt={post.caption}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
         />
 
-        <div 
-          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-6 text-white"
-        >
-          {/* --- CORREÇÃO AQUI: onClick adicionado --- */}
-          <button onClick={handleLike} className="flex items-center gap-1 font-semibold bg-transparent border-none">
-            <Heart className={`h-6 w-6 ${post.isLiked ? 'fill-white' : ''}`} />
-            <span>{post.likes}</span>
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-5">
+          <button
+            onClick={(e) => { e.stopPropagation(); likeMutation.mutate(); }}
+            className="flex items-center gap-1.5 text-white font-semibold"
+          >
+            <Heart className={`h-5 w-5 ${post.isLiked ? 'fill-white' : ''}`} />
+            <span className="text-sm">{post.likes}</span>
           </button>
-          <div className="flex items-center gap-1 font-semibold">
-            <MessageCircle className="h-6 w-6" />
-            <span>{post.comments}</span>
+          <div className="flex items-center gap-1.5 text-white font-semibold">
+            <MessageCircle className="h-5 w-5" />
+            <span className="text-sm">{post.comments}</span>
           </div>
         </div>
 
-        <div className="absolute top-2 right-2 z-10">
+        {/* Context menu */}
+        <div
+          className="absolute top-2 right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => e.stopPropagation()}
+        >
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className={`h-8 w-8 bg-black/50 hover:bg-black/70 text-white ${isHovered ? 'opacity-100' : 'opacity-0'} group-hover:opacity-100 transition-opacity`}
-                onClick={(e) => e.stopPropagation()}
-              >
+              <button className="p-1.5 rounded-lg bg-black/50 text-white hover:bg-black/70 transition-colors">
                 <MoreHorizontal className="h-4 w-4" />
-              </Button>
+              </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent 
-              align="end" 
-              className="bg-slate-800 border-slate-700 text-slate-200 w-48"
+            <DropdownMenuContent
+              align="end"
+              className="bg-slate-800 border-white/[0.08] text-slate-200 w-40 rounded-xl"
               onClick={(e) => e.stopPropagation()}
             >
               {isOwner ? (
                 <>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={handleDelete}
+                  <DropdownMenuItem
+                    className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100 text-sm"
+                    onClick={(e) => { e.stopPropagation(); navigate(`/post/${post.id}/edit`); }}
                   >
-                    <Trash2 className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Deletar</span>
+                    <Edit className="h-3.5 w-3.5 text-slate-400" />
+                    Editar
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/post/${post.id}/edit`);
-                    }}
+                  <DropdownMenuItem
+                    className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-red-500/10 focus:text-red-400 text-red-400 text-sm"
+                    onClick={(e) => { e.stopPropagation(); setIsDeleteOpen(true); }}
                   >
-                    <Edit className="h-4 w-4 mr-2 text-red-400" />
-                    <span>Editar</span>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Deletar
                   </DropdownMenuItem>
                 </>
               ) : (
-                <DropdownMenuItem 
-                  className="flex items-center cursor-pointer focus:bg-slate-700 focus:text-red-400"
-                  onClick={handleSave}
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer rounded-lg focus:bg-white/[0.06] focus:text-slate-100 text-sm"
+                  onClick={(e) => { e.stopPropagation(); saveMutation.mutate(); }}
                 >
-                  <Bookmark className="h-4 w-4 mr-2 text-red-400" />
-                  <span>{post.isSaved ? 'Remover dos salvos' : 'Salvar'}</span>
+                  <Bookmark className="h-3.5 w-3.5 text-slate-400" />
+                  {post.isSaved ? 'Remover dos salvos' : 'Salvar'}
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -160,20 +120,38 @@ export function ProfilePostCard({ post, isOwner, onUpdate }: ProfilePostCardProp
         </div>
       </div>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="bg-slate-800 border-slate-700 text-slate-200">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-400">Deletar Publicação?</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
-              Esta ação é permanente. Você tem certeza que quer deletar este post?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-600 hover:bg-red-700 text-white">Deletar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Delete confirmation — plain overlay, no Radix portal */}
+      {isDeleteOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60"
+          onClick={() => setIsDeleteOpen(false)}
+        >
+          <div
+            className="bg-slate-900 border border-white/[0.08] rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-slate-100 mb-1">Deletar publicação?</h3>
+            <p className="text-sm text-slate-400 mb-6">
+              Esta ação é permanente e não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsDeleteOpen(false)}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-white/[0.06] text-slate-200 hover:bg-white/[0.10] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 rounded-full text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {deleteMutation.isPending ? 'Deletando…' : 'Deletar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

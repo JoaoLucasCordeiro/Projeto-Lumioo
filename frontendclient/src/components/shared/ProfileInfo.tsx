@@ -1,147 +1,150 @@
 // src/components/shared/ProfileInfo.tsx
-import { Input } from "@/components/ui/input";
-import { Mail, GraduationCap, Calendar, User, BookOpen } from "lucide-react";
+import { useState } from "react";
+import { Info, X, GraduationCap, Building2, Calendar, Mail, UserCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+const ACADEMIC_LEVEL_MAP: Record<string, string> = {
+  UNDERGRADUATE: "Graduação",
+  MASTER: "Mestrado",
+  PHD: "Doutorado",
+  PROFESSOR: "Professor / Pesquisador",
+};
+
+function translateLevel(level: string): string {
+  return ACADEMIC_LEVEL_MAP[level] ?? level;
+}
+
+function formatDate(dateString: string, style: "long" | "short" = "long"): string {
+  if (!dateString) return "—";
+  return new Date(dateString).toLocaleDateString("pt-BR", {
+    month: style === "long" ? "long" : "short",
+    year: "numeric",
+    ...(style === "long" && { day: "2-digit" }),
+  });
+}
+
+interface InfoRowProps {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+}
+
+function ModalInfoRow({ icon: Icon, label, value }: InfoRowProps) {
+  return (
+    <div className="flex items-center gap-4 py-4 border-b border-white/[0.05] last:border-b-0">
+      <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center shrink-0">
+        <Icon className="h-4 w-4 text-slate-400" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-slate-500 mb-0.5">{label}</p>
+        <p className="text-sm text-slate-100 font-medium truncate">{value}</p>
+      </div>
+    </div>
+  );
+}
 
 interface ProfileInfoProps {
   userData: {
-    email: string;
-    institution: string;
-    academicLevel: string;
-    birthDate: string;
-    joinDate: string;
+    email?: string;
+    institution?: string;
+    academicLevel?: string;
+    birthDate?: string;
+    joinDate?: string;
   };
-  isEditing: boolean;
+  isOwner: boolean;
+  isEditing?: boolean;
 }
 
-export function ProfileInfo({ userData, isEditing }: ProfileInfoProps) {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
+export function ProfileInfo({ userData, isOwner }: ProfileInfoProps) {
+  const [open, setOpen] = useState(false);
 
-  const getAcademicLevelText = (level: string) => {
-    const levels: Record<string, string> = {
-      'Graduação': 'Estudante de Graduação',
-      'Mestrado': 'Estudante de Mestrado',
-      'Doutorado': 'Estudante de Doutorado',
-      'Professor': 'Professor/Pesquisador'
-    };
-    return levels[level] || level;
-  };
+  const rows: InfoRowProps[] = [
+    userData.academicLevel && {
+      icon: GraduationCap,
+      label: "Nível acadêmico",
+      value: translateLevel(userData.academicLevel),
+    },
+    userData.institution && {
+      icon: Building2,
+      label: "Instituição",
+      value: userData.institution,
+    },
+    userData.joinDate && {
+      icon: UserCheck,
+      label: "Membro desde",
+      value: formatDate(userData.joinDate, "short"),
+    },
+    isOwner && userData.email && {
+      icon: Mail,
+      label: "Email",
+      value: userData.email,
+    },
+    isOwner && userData.birthDate && {
+      icon: Calendar,
+      label: "Data de nascimento",
+      value: formatDate(userData.birthDate),
+    },
+  ].filter(Boolean) as InfoRowProps[];
+
+  if (rows.length === 0) return null;
 
   return (
-    <div className="px-4 md:px-8 lg:px-12 py-8">
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-xl font-bold text-slate-100 mb-6 pb-2 border-b border-slate-800">Informações do Perfil</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Email */}
-          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-full bg-red-600/20 flex-shrink-0">
-                <Mail className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-slate-400 mb-1">Email</h3>
-                {isEditing ? (
-                  <Input
-                    type="email"
-                    defaultValue={userData.email}
-                    className="bg-slate-800 border-slate-700 text-slate-200 focus:ring-red-500"
-                  />
-                ) : (
-                  <p className="text-slate-200 break-all">{userData.email}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Instituição */}
-          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-full bg-red-600/20 flex-shrink-0">
-                <BookOpen className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-slate-400 mb-1">Instituição</h3>
-                {isEditing ? (
-                  <Input
-                    type="text"
-                    defaultValue={userData.institution}
-                    className="bg-slate-800 border-slate-700 text-slate-200 focus:ring-red-500"
-                  />
-                ) : (
-                  <p className="text-slate-200">{userData.institution || "Não informado"}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Nível Acadêmico */}
-          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-full bg-red-600/20 flex-shrink-0">
-                <GraduationCap className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-slate-400 mb-1">Nível Acadêmico</h3>
-                {isEditing ? (
-                  <select
-                    defaultValue={userData.academicLevel}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-md p-2 text-slate-200 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="Graduação">Estudante de Graduação</option>
-                    <option value="Mestrado">Estudante de Mestrado</option>
-                    <option value="Doutorado">Estudante de Doutorado</option>
-                    <option value="Professor">Professor/Pesquisador</option>
-                  </select>
-                ) : (
-                  <p className="text-slate-200">{getAcademicLevelText(userData.academicLevel)}</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Data de Nascimento */}
-          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-full bg-red-600/20 flex-shrink-0">
-                <Calendar className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-slate-400 mb-1">Data de Nascimento</h3>
-                {isEditing ? (
-                  <Input
-                    type="date"
-                    defaultValue={userData.birthDate}
-                    className="bg-slate-800 border-slate-700 text-slate-200 focus:ring-red-500 [&::-webkit-calendar-picker-indicator]:invert-[0.7]"
-                  />
-                ) : (
-                  <p className="text-slate-200">
-                    {userData.birthDate ? formatDate(userData.birthDate) : "Não informada"}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Data de Entrada */}
-          <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700/50 backdrop-blur-sm hover:border-slate-600/50 transition-colors">
-            <div className="flex items-start gap-4">
-              <div className="p-2 rounded-full bg-red-600/20 flex-shrink-0">
-                <User className="h-5 w-5 text-red-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-medium text-slate-400 mb-1">Membro desde</h3>
-                <p className="text-slate-200">{formatDate(userData.joinDate)}</p>
-              </div>
-            </div>
-          </div>
-        </div>
+    <>
+      {/* Trigger button */}
+      <div className="px-4 md:px-8 pb-5">
+        <button
+          onClick={() => setOpen(true)}
+          className="group flex items-center gap-2 px-4 py-2 rounded-full border border-white/[0.08] text-slate-400 text-sm font-medium
+                     hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/[0.06] transition-all duration-200"
+        >
+          <Info className="h-3.5 w-3.5" />
+          Informações do perfil
+        </button>
       </div>
-    </div>
+
+      {/* Modal */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/60"
+            onClick={() => setOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.97 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="bg-slate-900 border border-white/[0.08] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06]">
+                <h3 className="text-sm font-semibold text-slate-100">Informações do perfil</h3>
+                <button
+                  onClick={() => setOpen(false)}
+                  className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Rows */}
+              <div className="px-5 pb-2">
+                {rows.map((row) => (
+                  <ModalInfoRow key={row.label} {...row} />
+                ))}
+              </div>
+
+              {/* Footer spacer */}
+              <div className="h-3" />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
