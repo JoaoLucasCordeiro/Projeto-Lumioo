@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,13 @@ import { Link } from "react-router-dom";
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const navLinks = [
     { label: "Início", href: "/", type: "route" },
@@ -46,7 +53,13 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 w-full z-50 bg-slate-900/50 backdrop-blur-lg border-b border-white/10 h-20">
+    <header
+      className={`fixed top-0 left-0 w-full z-50 h-20 border-b transition-all duration-300 ${
+        scrolled
+          ? "bg-slate-900/80 backdrop-blur-xl border-white/10 shadow-lg shadow-black/20"
+          : "bg-transparent border-transparent"
+      }`}
+    >
       <div className="container mx-auto px-6 flex items-center justify-between h-full">
         {/* Logo */}
         <Link to="/" className="flex items-center space-x-2">
@@ -57,19 +70,16 @@ export default function Header() {
         <nav className="hidden md:flex items-center space-x-10">
           {navLinks.map(renderLink)}
 
-          <Button
-            asChild
-            variant="outline"
-            className="bg-transparent text-white hover:bg-red-600 hover:scale-105 hover:text-white transition-all duration-300"
-          >
-            <Link to="/cadastro">Cadastre-se</Link>
-          </Button>
-          <Button
-            asChild
-            className="bg-red-500 hover:bg-red-600 hover:scale-105 shadow-md shadow-red-500/30 transition-all duration-300 text-white"
-          >
-            <Link to="/login">Entrar</Link>
-          </Button>
+          <Link to="/cadastro">
+            <button className="border border-white/20 text-slate-300 hover:border-white/40 hover:text-white px-6 py-2 rounded-full text-sm transition-colors duration-300">
+              Cadastre-se
+            </button>
+          </Link>
+          <Link to="/login">
+            <button className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-full text-sm font-semibold shadow-lg shadow-red-500/25 transition-all duration-300">
+              Entrar
+            </button>
+          </Link>
         </nav>
 
         {/* Mobile Menu */}
@@ -121,19 +131,16 @@ export default function Header() {
                   )
                 )}
 
-                <Button
-                  asChild
-                  variant="outline"
-                  className="bg-transparent text-white hover:bg-red-600 hover:text-white  hover:scale-105 transition-all duration-300 mt-4"
-                >
-                  <Link to="/cadastro">Cadastre-se</Link>
-                </Button>
-                <Button
-                  asChild
-                  className="bg-red-500 hover:bg-red-600 hover:scale-105 shadow-md shadow-red-500/30 transition-all duration-300 text-white mt-2"
-                >
-                  <Link to="/login">Entrar</Link>
-                </Button>
+                <Link to="/cadastro" onClick={() => setOpen(false)}>
+                  <button className="w-full border border-white/20 text-slate-300 hover:border-white/40 hover:text-white px-6 py-2.5 rounded-full text-sm transition-colors mt-4">
+                    Cadastre-se
+                  </button>
+                </Link>
+                <Link to="/login" onClick={() => setOpen(false)}>
+                  <button className="w-full bg-red-500 hover:bg-red-600 text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-red-500/25 transition-all mt-2">
+                    Entrar
+                  </button>
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
