@@ -1,28 +1,41 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, Image, ScrollView, TextInput } from 'react-native';
+import { View, Text, Pressable, Image, ScrollView, TextInput, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/Button';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const [email, setEmail] = useState('');
+  const { login } = useAuth();
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) return;
+    if (!identifier || !password) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      await login(identifier, password);
       router.replace('/(app)/feed');
-    }, 1000);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401) {
+        Alert.alert('Erro', 'Email/usuário ou senha inválidos.');
+      } else if (status === 429) {
+        Alert.alert('Muitas tentativas', 'Tente novamente em 15 minutos.');
+      } else {
+        Alert.alert('Erro', 'Não foi possível conectar. Tente novamente.');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -67,7 +80,7 @@ export default function LoginScreen() {
             className="flex-row items-center px-4 rounded-2xl border"
             style={{
               backgroundColor: colors.container,
-              borderColor: email ? colors.primary : colors.borderDark,
+              borderColor: identifier ? colors.primary : colors.borderDark,
               height: 52,
             }}
           >
@@ -75,10 +88,10 @@ export default function LoginScreen() {
             <TextInput
               className="flex-1 text-base"
               style={{ color: colors.textPrimary, padding: 0 }}
-              placeholder="seu@email.com"
+              placeholder="email ou @usuário"
               placeholderTextColor={colors.textMuted}
-              value={email}
-              onChangeText={setEmail}
+              value={identifier}
+              onChangeText={setIdentifier}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -94,14 +107,6 @@ export default function LoginScreen() {
             >
               Senha
             </Text>
-            <Pressable onPress={() => router.push('/auth/forgot-password')}>
-              <Text
-                className="text-xs font-medium"
-                style={{ color: colors.primary }}
-              >
-                Esqueceu?
-              </Text>
-            </Pressable>
           </View>
           <View
             className="flex-row items-center px-4 rounded-2xl border"
@@ -135,23 +140,11 @@ export default function LoginScreen() {
         <Button
           title={isLoading ? 'Entrando...' : 'Entrar'}
           onPress={handleLogin}
-          disabled={isLoading || !email || !password}
+          disabled={isLoading || !identifier || !password}
           loading={isLoading}
           size="large"
           className="mb-4"
         />
-
-        {/* Forgot Password Link */}
-        <View className="items-center mb-6">
-          <Pressable onPress={() => router.push('/auth/forgot-password')}>
-            <Text
-              className="text-sm font-medium"
-              style={{ color: colors.primary }}
-            >
-              Esqueci a senha
-            </Text>
-          </Pressable>
-        </View>
 
         {/* Register Link */}
         <View className="items-center">
