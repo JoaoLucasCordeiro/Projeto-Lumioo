@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Modal,
@@ -16,55 +17,74 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import type { User } from '@/constants/feedData';
-import { INITIAL_PROJECTS, type Project } from '@/constants/projectsData';
+import {
+  useProjectDetail,
+  getCategoryConfig,
+  PROJECT_ACCENT,
+} from '@/lib/hooks/useProjects';
 import { useTheme } from '@/contexts/ThemeContext';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function lightenCover(hex: string): string {
-  const map: Record<string, string> = {
-    '#1e3a8a': '#93c5fd',
-    '#7f1d1d': '#fca5a5',
-    '#4c1d95': '#c4b5fd',
-    '#713f12': '#fcd34d',
-    '#14532d': '#6ee7b7',
-    '#1e3a5f': '#7dd3fc',
-  };
-  return map[hex] ?? '#e2e8f0';
+function lightColor(hex: string): string {
+  return PROJECT_ACCENT[hex] ?? '#e2e8f0';
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? '?';
+  return ((parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '')).toUpperCase();
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({ user, size = 40 }: { user: User; size?: number }) {
+function InitialsAvatar({
+  name,
+  size = 40,
+  bgColor,
+}: {
+  name: string;
+  size?: number;
+  bgColor: string;
+}) {
   return (
     <View
       style={{
         width: size, height: size, borderRadius: size / 2,
-        backgroundColor: user.avatarColor,
+        backgroundColor: bgColor,
         alignItems: 'center', justifyContent: 'center',
         flexShrink: 0,
       }}
     >
       <Text style={{ color: '#fff', fontWeight: '700', fontSize: size * 0.35 }}>
-        {user.initials}
+        {getInitials(name)}
       </Text>
     </View>
   );
 }
 
-function ProjectCover({ project }: { project: Project }) {
+function ProjectCover({
+  coverColor,
+  areaIcon,
+  title,
+  category,
+}: {
+  coverColor: string;
+  areaIcon: string;
+  title: string;
+  category: string;
+}) {
   return (
-    <View style={[styles.cover, { backgroundColor: project.coverColor }]}>
+    <View style={[styles.cover, { backgroundColor: coverColor }]}>
       <View style={styles.coverCircle1} />
       <View style={styles.coverCircle2} />
       <View style={styles.coverCircle3} />
       <View style={styles.coverIconWrap}>
         <View style={styles.coverIconBg}>
-          <Ionicons name={project.areaIcon as any} size={42} color="rgba(255,255,255,0.88)" />
+          <Ionicons name={areaIcon as any} size={42} color="rgba(255,255,255,0.88)" />
         </View>
-        <Text style={styles.coverTitle}>{project.title}</Text>
-        <Text style={styles.coverArea}>{project.area}</Text>
+        <Text style={styles.coverTitle}>{title}</Text>
+        <Text style={styles.coverArea}>{category}</Text>
       </View>
     </View>
   );
@@ -77,17 +97,22 @@ function SectionLabel({ label }: { label: string }) {
   );
 }
 
-function MemberCard({ member }: { member: { user: User; role: string } }) {
+function MemberCard({
+  name,
+  role,
+  coverColor,
+}: {
+  name: string;
+  role: string;
+  coverColor: string;
+}) {
   const { colors } = useTheme();
   return (
     <View style={[styles.memberCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
-      <Avatar user={member.user} size={40} />
+      <InitialsAvatar name={name} size={40} bgColor={coverColor} />
       <View style={styles.memberInfo}>
-        <Text style={[styles.memberName, { color: colors.textPrimary }]}>{member.user.name}</Text>
-        <Text style={[styles.memberRole, { color: colors.textMuted }]}>{member.role}</Text>
-        <Text style={[styles.memberInstitution, { color: colors.textTertiary }]} numberOfLines={1}>
-          {member.user.institution}
-        </Text>
+        <Text style={[styles.memberName, { color: colors.textPrimary }]}>{name}</Text>
+        <Text style={[styles.memberRole, { color: colors.textMuted }]}>{role}</Text>
       </View>
     </View>
   );
@@ -98,10 +123,12 @@ function MemberCard({ member }: { member: { user: User; role: string } }) {
 function ChatModal({
   visible,
   author,
+  authorUsername,
   onClose,
 }: {
   visible: boolean;
-  author: User;
+  author: string;
+  authorUsername: string;
   onClose: () => void;
 }) {
   const { colors } = useTheme();
@@ -120,6 +147,8 @@ function ChatModal({
     setSent(false);
     onClose();
   };
+
+  const firstName = author.split(' ')[0] ?? author;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
@@ -140,13 +169,24 @@ function ChatModal({
 
               {/* Header */}
               <View style={styles.chatHeader}>
-                <Avatar user={author} size={44} />
+                <View
+                  style={{
+                    width: 44, height: 44, borderRadius: 22,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+                    {getInitials(author)}
+                  </Text>
+                </View>
                 <View style={styles.chatHeaderInfo}>
                   <Text style={[styles.chatHeaderName, { color: colors.textPrimary }]}>
-                    {author.name}
+                    {author}
                   </Text>
                   <Text style={[styles.chatHeaderSub, { color: colors.textMuted }]}>
-                    {author.username} · {author.institution}
+                    @{authorUsername}
                   </Text>
                 </View>
               </View>
@@ -163,7 +203,7 @@ function ChatModal({
                     Mensagem enviada!
                   </Text>
                   <Text style={[styles.sentSub, { color: colors.textMuted }]}>
-                    {author.name} receberá sua mensagem e poderá responder em breve.
+                    {firstName} receberá sua mensagem e poderá responder em breve.
                   </Text>
                   <Pressable
                     onPress={handleClose}
@@ -176,7 +216,7 @@ function ChatModal({
                 /* Compose state */
                 <>
                   <Text style={[styles.chatPrompt, { color: colors.textSecondary }]}>
-                    Escreva sua mensagem para {author.name.split(' ')[0]}:
+                    Escreva sua mensagem para {firstName}:
                   </Text>
                   <View
                     style={[
@@ -240,14 +280,35 @@ export default function ProjectDetailScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const project = INITIAL_PROJECTS.find((p) => p.id === id);
+  const { data: project, isLoading, isError } = useProjectDetail(id ?? '');
   const [chatVisible, setChatVisible] = useState(false);
   const [saved, setSaved] = useState(false);
 
   const navBarHeight = Math.max(insets.bottom, 8) + 16 + 72;
   const ctaBarHeight = 72;
 
-  if (!project) {
+  // ── Loading ──
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]} pointerEvents="box-none">
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={10}
+            style={[styles.overlayBtn, { backgroundColor: colors.container }]}
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+        <View style={styles.notFound}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Error / Not found ──
+  if (isError || !project) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.borderDark }]}>
@@ -262,7 +323,27 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  const accentColor = lightenCover(project.coverColor);
+  const cfg = getCategoryConfig(project.category);
+  const coverColor = cfg.color;
+  const areaIcon = cfg.icon;
+  const accentColor = lightColor(coverColor);
+
+  const isOpen = project.status === 'OPEN_FOR_APPLICATIONS';
+  const isCompleted = project.status === 'COMPLETED';
+
+  const statusLabel = isOpen
+    ? 'Aceita membros'
+    : isCompleted
+    ? 'Concluído'
+    : 'Em andamento';
+
+  const statusBg = isOpen
+    ? 'rgba(16,185,129,0.12)'
+    : isCompleted
+    ? 'rgba(100,116,139,0.12)'
+    : 'rgba(59,130,246,0.12)';
+
+  const statusColor = isOpen ? '#10b981' : isCompleted ? colors.textMuted : '#60a5fa';
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -309,49 +390,31 @@ export default function ProjectDetailScreen() {
         contentContainerStyle={{ paddingBottom: navBarHeight + ctaBarHeight + 24 }}
       >
         {/* Cover */}
-        <ProjectCover project={project} />
+        <ProjectCover
+          coverColor={coverColor}
+          areaIcon={areaIcon}
+          title={project.title}
+          category={project.category}
+        />
 
         {/* Main info */}
         <View style={styles.mainSection}>
           {/* Status badge */}
           <View style={styles.statusRow}>
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor: project.acceptingMembers
-                    ? 'rgba(16,185,129,0.12)'
-                    : 'rgba(100,116,139,0.12)',
-                },
-              ]}
-            >
-              <View
-                style={[
-                  styles.statusDot,
-                  { backgroundColor: project.acceptingMembers ? '#10b981' : colors.textMuted },
-                ]}
-              />
-              <Text
-                style={[
-                  styles.statusText,
-                  { color: project.acceptingMembers ? '#10b981' : colors.textMuted },
-                ]}
-              >
-                {project.acceptingMembers
-                  ? `Aceita membros · ${project.openRoles.length} vaga${project.openRoles.length !== 1 ? 's' : ''}`
-                  : 'Equipe completa'}
-              </Text>
+            <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
             </View>
-            <Text style={[styles.createdAt, { color: colors.textMuted }]}>{project.createdAt}</Text>
+            <Text style={[styles.createdAt, { color: colors.textMuted }]}>{project.year}</Text>
           </View>
 
           {/* Title */}
           <Text style={[styles.title, { color: colors.textPrimary }]}>{project.title}</Text>
 
-          {/* Area badge */}
-          <View style={[styles.areaBadge, { backgroundColor: `${project.coverColor}35` }]}>
-            <Ionicons name={project.areaIcon as any} size={12} color={accentColor} />
-            <Text style={[styles.areaBadgeText, { color: accentColor }]}>{project.area}</Text>
+          {/* Category badge */}
+          <View style={[styles.areaBadge, { backgroundColor: `${coverColor}35` }]}>
+            <Ionicons name={areaIcon as any} size={12} color={accentColor} />
+            <Text style={[styles.areaBadgeText, { color: accentColor }]}>{project.category}</Text>
           </View>
         </View>
 
@@ -361,12 +424,12 @@ export default function ProjectDetailScreen() {
         <View style={styles.section}>
           <SectionLabel label="Líder" />
           <View style={[styles.authorCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
-            <Avatar user={project.author} size={48} />
+            <InitialsAvatar name={project.author} size={48} bgColor={coverColor} />
             <View style={styles.authorInfo}>
-              <Text style={[styles.authorName, { color: colors.textPrimary }]}>{project.author.name}</Text>
-              <Text style={[styles.authorUsername, { color: colors.textMuted }]}>{project.author.username}</Text>
+              <Text style={[styles.authorName, { color: colors.textPrimary }]}>{project.author}</Text>
+              <Text style={[styles.authorUsername, { color: colors.textMuted }]}>@{project.authorUsername}</Text>
               <Text style={[styles.authorInstitution, { color: colors.textTertiary }]} numberOfLines={1}>
-                {project.author.institution}
+                {project.institution}
               </Text>
             </View>
             <Pressable
@@ -388,85 +451,29 @@ export default function ProjectDetailScreen() {
         <View style={styles.section}>
           <SectionLabel label="Sobre o projeto" />
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            {project.fullDescription}
+            {project.detailedDescription || project.description}
           </Text>
         </View>
 
         <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
 
-        {/* Open roles (if accepting) */}
-        {project.acceptingMembers && project.openRoles.length > 0 && (
-          <>
-            <View style={styles.section}>
-              <SectionLabel label="Vagas abertas" />
-              <View style={styles.rolesContainer}>
-                {project.openRoles.map((role) => (
-                  <View key={role} style={[styles.roleChip, { backgroundColor: colors.container, borderColor: colors.border }]}>
-                    <Ionicons name="add-circle-outline" size={14} color={colors.primary} />
-                    <Text style={[styles.roleText, { color: colors.textSecondary }]}>{role}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-            <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
-          </>
-        )}
-
         {/* Members */}
-        <View style={styles.section}>
-          <SectionLabel label={`Equipe · ${project.members.length} membro${project.members.length !== 1 ? 's' : ''}`} />
-          <View style={styles.membersContainer}>
-            {project.members.map((member) => (
-              <MemberCard key={member.user.id} member={member} />
-            ))}
-          </View>
-        </View>
-
-        <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
-
-        {/* Tags */}
-        <View style={styles.section}>
-          <SectionLabel label="Tecnologias & temas" />
-          <View style={styles.tagsWrap}>
-            {project.tags.map((tag) => (
-              <View key={tag} style={[styles.tagChip, { backgroundColor: colors.container, borderColor: colors.border }]}>
-                <Text style={[styles.tagText, { color: colors.textTertiary }]}>{tag}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Links */}
-        {project.links.length > 0 && (
+        {project.team.length > 0 && (
           <>
-            <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
             <View style={styles.section}>
-              <SectionLabel label="Links" />
-              <View style={styles.linksContainer}>
-                {project.links.map((link) => (
-                  <Pressable
-                    key={link.label}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      Alert.alert(link.label, 'Abrir no navegador em breve.');
-                    }}
-                    style={({ pressed }) => [
-                      styles.linkRow,
-                      {
-                        backgroundColor: colors.container,
-                        borderColor: colors.border,
-                        opacity: pressed ? 0.75 : 1,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="link-outline" size={16} color={colors.primary} />
-                    <Text style={[styles.linkText, { color: colors.primary }]}>{link.label}</Text>
-                    <View style={{ flex: 1 }} />
-                    <Ionicons name="open-outline" size={14} color={colors.textMuted} />
-                  </Pressable>
+              <SectionLabel label={`Equipe · ${project.team.length} membro${project.team.length !== 1 ? 's' : ''}`} />
+              <View style={styles.membersContainer}>
+                {project.team.map((member, index) => (
+                  <MemberCard
+                    key={`${member.name}-${index}`}
+                    name={member.name}
+                    role={member.role}
+                    coverColor={coverColor}
+                  />
                 ))}
               </View>
             </View>
+            <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
           </>
         )}
       </ScrollView>
@@ -482,7 +489,7 @@ export default function ProjectDetailScreen() {
           },
         ]}
       >
-        {project.acceptingMembers ? (
+        {isOpen ? (
           <View style={styles.ctaRow}>
             <Pressable
               onPress={() => {
@@ -504,7 +511,7 @@ export default function ProjectDetailScreen() {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 Alert.alert(
                   'Solicitação enviada!',
-                  `Sua solicitação para participar do ${project.title} foi enviada para ${project.author.name}.`,
+                  `Sua solicitação para participar do ${project.title} foi enviada para ${project.author}.`,
                   [{ text: 'Ok' }]
                 );
               }}
@@ -542,6 +549,7 @@ export default function ProjectDetailScreen() {
       <ChatModal
         visible={chatVisible}
         author={project.author}
+        authorUsername={project.authorUsername}
         onClose={() => setChatVisible(false)}
       />
     </View>
@@ -754,24 +762,6 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 
-  // Open roles
-  rolesContainer: {
-    gap: 8,
-  },
-  roleChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  roleText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
   // Members
   membersContainer: {
     gap: 10,
@@ -794,44 +784,6 @@ const styles = StyleSheet.create({
   memberRole: {
     fontSize: 12,
     marginTop: 1,
-  },
-  memberInstitution: {
-    fontSize: 11,
-    marginTop: 1,
-  },
-
-  // Tags
-  tagsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tagChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  tagText: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-
-  // Links
-  linksContainer: {
-    gap: 8,
-  },
-  linkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  linkText: {
-    fontSize: 14,
-    fontWeight: '500',
   },
 
   // CTA bar
@@ -994,7 +946,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Not found
+  // Not found / loading
   notFound: {
     flex: 1,
     alignItems: 'center',

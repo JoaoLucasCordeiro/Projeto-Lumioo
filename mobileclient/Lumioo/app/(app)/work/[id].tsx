@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Pressable,
   ScrollView,
@@ -13,52 +14,58 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/contexts/ThemeContext';
-import type { User } from '@/constants/feedData';
 import {
-  INITIAL_WORKS,
-  TYPE_CONFIG,
-  AREA_CONFIG,
-  COVER_ACCENT,
-  type Work,
-} from '@/constants/worksData';
+  useWorkDetail,
+  WORK_TYPE_CONFIG,
+  WORK_TYPE_LABEL,
+  WORKS_COVER_ACCENT,
+} from '@/lib/hooks/useWorks';
+import api from '@/lib/api';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? '?';
+  return ((parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '')).toUpperCase();
+}
+
+function formatCount(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  return String(n);
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({ user, size = 40 }: { user: User; size?: number }) {
+function WorkCover({
+  coverColor,
+  typeIcon,
+  typeLabel,
+  title,
+  areaLabel,
+}: {
+  coverColor: string;
+  typeIcon: string;
+  typeLabel: string;
+  title: string;
+  areaLabel: string;
+}) {
   return (
-    <View
-      style={{
-        width: size, height: size, borderRadius: size / 2,
-        backgroundColor: user.avatarColor,
-        alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize: size * 0.35 }}>
-        {user.initials}
-      </Text>
-    </View>
-  );
-}
-
-function WorkCover({ work }: { work: Work }) {
-  const typeConfig = TYPE_CONFIG[work.type];
-  return (
-    <View style={[styles.cover, { backgroundColor: work.coverColor }]}>
+    <View style={[styles.cover, { backgroundColor: coverColor }]}>
       <View style={styles.coverCircle1} />
       <View style={styles.coverCircle2} />
       <View style={styles.coverCircle3} />
       <View style={styles.coverIconWrap}>
         <View style={styles.coverIconBg}>
-          <Ionicons name={typeConfig.icon as any} size={42} color="rgba(255,255,255,0.88)" />
+          <Ionicons name={typeIcon as any} size={42} color="rgba(255,255,255,0.88)" />
         </View>
-        <Text style={styles.coverTitle} numberOfLines={2}>{work.title}</Text>
+        <Text style={styles.coverTitle} numberOfLines={2}>{title}</Text>
         <View style={styles.coverMeta}>
           <View style={[styles.coverPill, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-            <Text style={styles.coverPillText}>{work.type}</Text>
+            <Text style={styles.coverPillText}>{typeLabel}</Text>
           </View>
           <View style={[styles.coverPill, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
-            <Text style={styles.coverPillText}>{work.area}</Text>
+            <Text style={styles.coverPillText}>{areaLabel}</Text>
           </View>
         </View>
       </View>
@@ -73,17 +80,25 @@ function SectionLabel({ label }: { label: string }) {
   );
 }
 
-function AuthorCard({ user }: { user: User }) {
+function SimpleAuthorCard({ name, username, coverColor }: { name: string; username: string; coverColor: string }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.authorCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
-      <Avatar user={user} size={44} />
-      <View style={styles.authorInfo}>
-        <Text style={[styles.authorName, { color: colors.textPrimary }]}>{user.name}</Text>
-        <Text style={[styles.authorUsername, { color: colors.textMuted }]}>{user.username}</Text>
-        <Text style={[styles.authorInstitution, { color: colors.textTertiary }]} numberOfLines={1}>
-          {user.institution}
+      <View
+        style={{
+          width: 44, height: 44, borderRadius: 22,
+          backgroundColor: coverColor,
+          alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+        }}
+      >
+        <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>
+          {getInitials(name)}
         </Text>
+      </View>
+      <View style={styles.authorInfo}>
+        <Text style={[styles.authorName, { color: colors.textPrimary }]}>{name}</Text>
+        <Text style={[styles.authorUsername, { color: colors.textMuted }]}>@{username}</Text>
       </View>
     </View>
   );
@@ -93,14 +108,16 @@ function InfoRow({
   icon,
   label,
   value,
+  last = false,
 }: {
   icon: string;
   label: string;
   value: string;
+  last?: boolean;
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.infoRow, { borderBottomColor: colors.borderDark }]}>
+    <View style={[styles.infoRow, { borderBottomColor: colors.borderDark, borderBottomWidth: last ? 0 : 1 }]}>
       <Ionicons name={icon as any} size={16} color={colors.textMuted} style={styles.infoIcon} />
       <Text style={[styles.infoLabel, { color: colors.textMuted }]}>{label}</Text>
       <Text style={[styles.infoValue, { color: colors.textPrimary }]} numberOfLines={1}>
@@ -108,11 +125,6 @@ function InfoRow({
       </Text>
     </View>
   );
-}
-
-function formatCount(n: number): string {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-  return String(n);
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -123,15 +135,36 @@ export default function WorkDetailScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const work = INITIAL_WORKS.find((w) => w.id === id);
+  const { data: work, isLoading, isError } = useWorkDetail(id ?? '');
   const [saved, setSaved] = useState(false);
-  const [downloadCount, setDownloadCount] = useState(work?.downloadCount ?? 0);
+  const [downloadCount, setDownloadCount] = useState<number | null>(null);
   const [downloaded, setDownloaded] = useState(false);
 
   const navBarHeight = Math.max(insets.bottom, 8) + 16 + 72;
   const ctaBarHeight = 72;
 
-  if (!work) {
+  // ── Loading ──
+  if (isLoading) {
+    return (
+      <View style={[styles.screen, { backgroundColor: colors.background }]}>
+        <View style={[styles.header, { paddingTop: insets.top + 12 }]} pointerEvents="box-none">
+          <Pressable
+            onPress={() => router.back()}
+            hitSlop={10}
+            style={[styles.overlayBtn, { backgroundColor: colors.container }]}
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          </Pressable>
+        </View>
+        <View style={styles.notFound}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  // ── Error / Not found ──
+  if (isError || !work) {
     return (
       <View style={[styles.screen, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: colors.borderDark }]}>
@@ -146,15 +179,26 @@ export default function WorkDetailScreen() {
     );
   }
 
-  const accent = COVER_ACCENT[work.coverColor] ?? '#e2e8f0';
-  const typeConfig = TYPE_CONFIG[work.type];
-  const areaConfig = AREA_CONFIG[work.area];
+  const typeConfig = WORK_TYPE_CONFIG[work.type];
+  const coverColor = typeConfig.coverColor;
+  const accent = WORKS_COVER_ACCENT[coverColor] ?? '#e2e8f0';
+  const displayType = WORK_TYPE_LABEL[work.type];
+  const currentDownloads = downloadCount ?? work.downloads;
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (!downloaded) {
-      setDownloadCount((c) => c + 1);
-      setDownloaded(true);
+    try {
+      await api.get(`/works/${id}/download`);
+      if (!downloaded) {
+        setDownloadCount(currentDownloads + 1);
+        setDownloaded(true);
+      }
+    } catch {
+      // increment locally even if request fails
+      if (!downloaded) {
+        setDownloadCount(currentDownloads + 1);
+        setDownloaded(true);
+      }
     }
     Alert.alert('Download iniciado', 'O trabalho está sendo baixado para o seu dispositivo.');
   };
@@ -163,6 +207,16 @@ export default function WorkDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert('Visualizar', 'Abertura do PDF em breve.');
   };
+
+  // Build info rows (conditionally)
+  const infoRows: { icon: string; label: string; value: string }[] = [
+    { icon: 'business-outline', label: 'Instituição', value: work.institution },
+    { icon: 'calendar-outline', label: 'Ano', value: String(work.year) },
+    { icon: 'person-outline', label: 'Orientador', value: work.advisor },
+  ];
+  if (work.department) {
+    infoRows.push({ icon: 'grid-outline', label: 'Departamento', value: work.department });
+  }
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -209,30 +263,22 @@ export default function WorkDetailScreen() {
         contentContainerStyle={{ paddingBottom: navBarHeight + ctaBarHeight + 24 }}
       >
         {/* Cover */}
-        <WorkCover work={work} />
+        <WorkCover
+          coverColor={coverColor}
+          typeIcon={typeConfig.icon}
+          typeLabel={displayType}
+          title={work.title}
+          areaLabel={work.area}
+        />
 
-        {/* Stats bar */}
+        {/* Stats bar — downloads only */}
         <View style={[styles.statsBar, { backgroundColor: colors.container, borderBottomColor: colors.borderDark }]}>
           <View style={styles.statItem}>
             <Ionicons name="download-outline" size={16} color={colors.primary} />
             <Text style={[styles.statValue, { color: colors.textPrimary }]}>
-              {formatCount(downloadCount)}
+              {formatCount(currentDownloads)}
             </Text>
             <Text style={[styles.statLabel, { color: colors.textMuted }]}>downloads</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.borderDark }]} />
-          <View style={styles.statItem}>
-            <Ionicons name="eye-outline" size={16} color={colors.primary} />
-            <Text style={[styles.statValue, { color: colors.textPrimary }]}>
-              {formatCount(work.viewCount)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>visualizações</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.borderDark }]} />
-          <View style={styles.statItem}>
-            <Ionicons name="document-outline" size={16} color={colors.primary} />
-            <Text style={[styles.statValue, { color: colors.textPrimary }]}>{work.pages}</Text>
-            <Text style={[styles.statLabel, { color: colors.textMuted }]}>páginas</Text>
           </View>
         </View>
 
@@ -242,14 +288,13 @@ export default function WorkDetailScreen() {
           <View style={styles.badgesRow}>
             <View style={[styles.typeBadge, { backgroundColor: `${typeConfig.color}20` }]}>
               <Ionicons name={typeConfig.icon as any} size={12} color={typeConfig.color} />
-              <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>{work.type}</Text>
+              <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>{displayType}</Text>
             </View>
-            <View style={[styles.areaBadge, { backgroundColor: `${work.coverColor}35` }]}>
-              <Ionicons name={areaConfig.icon as any} size={12} color={accent} />
+            <View style={[styles.areaBadge, { backgroundColor: `${coverColor}35` }]}>
               <Text style={[styles.areaBadgeText, { color: accent }]}>{work.area}</Text>
             </View>
             <View style={{ flex: 1 }} />
-            <Text style={[styles.publishedAt, { color: colors.textMuted }]}>{work.publishedAt}</Text>
+            <Text style={[styles.publishedAt, { color: colors.textMuted }]}>{work.year}</Text>
           </View>
 
           {/* Title */}
@@ -258,14 +303,14 @@ export default function WorkDetailScreen() {
 
         <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
 
-        {/* Autores */}
+        {/* Autor */}
         <View style={styles.section}>
-          <SectionLabel label={`Autor${work.authors.length > 1 ? 'es' : ''} · ${work.authors.length}`} />
-          <View style={styles.authorsContainer}>
-            {work.authors.map((author) => (
-              <AuthorCard key={author.id} user={author} />
-            ))}
-          </View>
+          <SectionLabel label="Autor" />
+          <SimpleAuthorCard
+            name={work.author}
+            username={work.authorUsername}
+            coverColor={coverColor}
+          />
         </View>
 
         <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
@@ -274,7 +319,7 @@ export default function WorkDetailScreen() {
         <View style={styles.section}>
           <SectionLabel label="Resumo" />
           <Text style={[styles.abstract, { color: colors.textSecondary }]}>
-            {work.fullAbstract}
+            {work.detailedDescription || work.abstract}
           </Text>
         </View>
 
@@ -284,33 +329,50 @@ export default function WorkDetailScreen() {
         <View style={styles.section}>
           <SectionLabel label="Informações" />
           <View style={[styles.infoCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
-            <InfoRow icon="business-outline" label="Instituição" value={work.institution} />
-            <InfoRow icon="calendar-outline" label="Ano" value={String(work.year)} />
-            <InfoRow icon="document-outline" label="Páginas" value={`${work.pages} páginas`} />
-            {work.doi && (
-              <InfoRow icon="link-outline" label="DOI" value={work.doi} />
-            )}
-            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-              <Ionicons name="time-outline" size={16} color={colors.textMuted} style={styles.infoIcon} />
-              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Publicado</Text>
-              <Text style={[styles.infoValue, { color: colors.textPrimary }]}>{work.publishedAt}</Text>
-            </View>
+            {infoRows.map((row, index) => (
+              <InfoRow
+                key={row.label}
+                icon={row.icon}
+                label={row.label}
+                value={row.value}
+                last={index === infoRows.length - 1}
+              />
+            ))}
           </View>
         </View>
 
         <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
 
         {/* Palavras-chave */}
-        <View style={styles.section}>
-          <SectionLabel label="Palavras-chave" />
-          <View style={styles.keywordsWrap}>
-            {work.keywords.map((kw) => (
-              <View key={kw} style={[styles.kwChip, { backgroundColor: colors.container, borderColor: colors.border }]}>
-                <Text style={[styles.kwChipText, { color: colors.textSecondary }]}>{kw}</Text>
+        {work.keywords.length > 0 && (
+          <>
+            <View style={styles.section}>
+              <SectionLabel label="Palavras-chave" />
+              <View style={styles.keywordsWrap}>
+                {work.keywords.map((kw) => (
+                  <View key={kw} style={[styles.kwChip, { backgroundColor: colors.container, borderColor: colors.border }]}>
+                    <Text style={[styles.kwChipText, { color: colors.textSecondary }]}>{kw}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
+            </View>
+            <View style={[styles.divider, { backgroundColor: colors.borderDark }]} />
+          </>
+        )}
+
+        {/* Referências */}
+        {work.references.length > 0 && (
+          <View style={styles.section}>
+            <SectionLabel label="Referências" />
+            <View style={styles.referencesContainer}>
+              {work.references.map((ref, index) => (
+                <View key={index} style={[styles.referenceItem, { borderLeftColor: `${typeConfig.color}60` }]}>
+                  <Text style={[styles.referenceText, { color: colors.textSecondary }]}>{ref}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
 
       {/* CTA Bottom Bar */}
@@ -354,7 +416,7 @@ export default function WorkDetailScreen() {
                 color="#fff"
               />
               <Text style={styles.ctaBtnPrimaryText}>
-                {downloaded ? 'Baixado' : `Download · ${formatCount(downloadCount)}`}
+                {downloaded ? 'Baixado' : `Download · ${formatCount(currentDownloads)}`}
               </Text>
             </View>
           </Pressable>
@@ -456,7 +518,7 @@ const styles = StyleSheet.create({
   statsBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     paddingVertical: 14,
     borderBottomWidth: 1,
   },
@@ -471,10 +533,6 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-  },
-  statDivider: {
-    width: 1,
-    height: 24,
   },
 
   // Main section
@@ -541,10 +599,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Authors
-  authorsContainer: {
-    gap: 10,
-  },
+  // Author
   authorCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -559,10 +614,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   authorUsername: {
-    fontSize: 12,
-    marginTop: 1,
-  },
-  authorInstitution: {
     fontSize: 12,
     marginTop: 1,
   },
@@ -584,7 +635,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderBottomWidth: 1,
   },
   infoIcon: {
     marginRight: 10,
@@ -615,6 +665,20 @@ const styles = StyleSheet.create({
   kwChipText: {
     fontSize: 13,
     fontWeight: '500',
+  },
+
+  // References
+  referencesContainer: {
+    gap: 10,
+  },
+  referenceItem: {
+    borderLeftWidth: 3,
+    paddingLeft: 12,
+    paddingVertical: 4,
+  },
+  referenceText: {
+    fontSize: 13,
+    lineHeight: 20,
   },
 
   // CTA bar
@@ -661,7 +725,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Not found
+  // Not found / loading
   notFound: {
     flex: 1,
     alignItems: 'center',

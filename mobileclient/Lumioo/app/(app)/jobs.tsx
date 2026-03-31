@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
+  ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,48 +14,38 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import {
-  INITIAL_WORKS,
-  TYPE_CONFIG,
-  AREA_CONFIG,
-  COVER_ACCENT,
-  type Work,
-  type WorkType,
-  type WorkArea,
-} from '@/constants/worksData';
-import type { User } from '@/constants/feedData';
+  useWorks,
+  WORK_TYPE_CONFIG,
+  WORK_TYPE_LABEL,
+  WORK_LABEL_TO_API,
+  WORKS_COVER_ACCENT,
+  type ApiWork,
+} from '@/lib/hooks/useWorks';
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({ user, size = 22 }: { user: User; size?: number }) {
+function WorkCover({
+  coverColor,
+  typeIcon,
+  typeLabel,
+  height = 120,
+}: {
+  coverColor: string;
+  typeIcon: string;
+  typeLabel: string;
+  height?: number;
+}) {
   return (
-    <View
-      style={{
-        width: size, height: size, borderRadius: size / 2,
-        backgroundColor: user.avatarColor,
-        alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize: size * 0.36 }}>
-        {user.initials}
-      </Text>
-    </View>
-  );
-}
-
-function WorkCover({ work, height = 120 }: { work: Work; height?: number }) {
-  const typeConfig = TYPE_CONFIG[work.type];
-  return (
-    <View style={{ height, backgroundColor: work.coverColor, overflow: 'hidden' }}>
+    <View style={{ height, backgroundColor: coverColor, overflow: 'hidden' }}>
       <View style={styles.coverCircle1} />
       <View style={styles.coverCircle2} />
       <View style={styles.coverCircle3} />
       <View style={styles.coverContent}>
         <View style={styles.coverIconBg}>
-          <Ionicons name={typeConfig.icon as any} size={28} color="rgba(255,255,255,0.88)" />
+          <Ionicons name={typeIcon as any} size={28} color="rgba(255,255,255,0.88)" />
         </View>
         <View style={[styles.typePill, { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
-          <Text style={styles.typePillText}>{work.type}</Text>
+          <Text style={styles.typePillText}>{typeLabel}</Text>
         </View>
       </View>
     </View>
@@ -62,10 +53,8 @@ function WorkCover({ work, height = 120 }: { work: Work; height?: number }) {
 }
 
 const FILTER_ALL = 'Todos';
-const TYPES: (typeof FILTER_ALL | WorkType)[] = [FILTER_ALL, 'TCC', 'Artigo', 'Tese', 'Dissertação'];
-const AREAS: (typeof FILTER_ALL | WorkArea)[] = [
-  FILTER_ALL, 'Computação', 'Medicina', 'Design', 'Física', 'Biologia', 'Engenharia',
-];
+const TYPE_LABELS = [FILTER_ALL, 'TCC', 'Artigo', 'Tese', 'Dissertação'];
+const AREA_LABELS = [FILTER_ALL, 'Computação', 'Medicina', 'Biologia', 'Engenharia', 'Física'];
 
 function FilterChip({
   label,
@@ -100,11 +89,12 @@ function formatCount(n: number): string {
   return String(n);
 }
 
-function WorkCard({ work, onPress }: { work: Work; onPress: () => void }) {
+function WorkCard({ work, onPress }: { work: ApiWork; onPress: () => void }) {
   const { colors } = useTheme();
-  const accent = COVER_ACCENT[work.coverColor] ?? '#e2e8f0';
-  const areaConfig = AREA_CONFIG[work.area];
-  const typeConfig = TYPE_CONFIG[work.type];
+  const typeConfig = WORK_TYPE_CONFIG[work.type];
+  const coverColor = typeConfig.coverColor;
+  const accent = WORKS_COVER_ACCENT[coverColor] ?? '#e2e8f0';
+  const displayType = WORK_TYPE_LABEL[work.type];
 
   return (
     <Pressable
@@ -115,7 +105,11 @@ function WorkCard({ work, onPress }: { work: Work; onPress: () => void }) {
       ]}
     >
       {/* Cover */}
-      <WorkCover work={work} />
+      <WorkCover
+        coverColor={coverColor}
+        typeIcon={typeConfig.icon}
+        typeLabel={displayType}
+      />
 
       {/* Body */}
       <View style={styles.cardBody}>
@@ -123,10 +117,9 @@ function WorkCard({ work, onPress }: { work: Work; onPress: () => void }) {
         <View style={styles.badgesRow}>
           <View style={[styles.typeBadge, { backgroundColor: `${typeConfig.color}20` }]}>
             <Ionicons name={typeConfig.icon as any} size={11} color={typeConfig.color} />
-            <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>{work.type}</Text>
+            <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>{displayType}</Text>
           </View>
-          <View style={[styles.areaBadge, { backgroundColor: `${work.coverColor}40` }]}>
-            <Ionicons name={areaConfig.icon as any} size={11} color={accent} />
+          <View style={[styles.areaBadge, { backgroundColor: `${coverColor}40` }]}>
             <Text style={[styles.areaBadgeText, { color: accent }]}>{work.area}</Text>
           </View>
         </View>
@@ -136,23 +129,16 @@ function WorkCard({ work, onPress }: { work: Work; onPress: () => void }) {
           {work.title}
         </Text>
 
-        {/* Authors */}
+        {/* Author */}
         <View style={styles.authorsRow}>
-          {work.authors.slice(0, 3).map((author) => (
-            <Avatar key={author.id} user={author} size={18} />
-          ))}
           <Text style={[styles.authorsText, { color: colors.textMuted }]} numberOfLines={1}>
-            {work.authors.map((a) => a.name.split(' ')[0]).join(', ')}
+            {work.author}
           </Text>
         </View>
 
         {/* Institution & year */}
         <View style={styles.metaRow}>
-          <Ionicons name="business-outline" size={12} color={colors.textMuted} />
-          <Text style={[styles.metaText, { color: colors.textMuted }]} numberOfLines={1}>
-            {work.institution}
-          </Text>
-          <Text style={[styles.metaSep, { color: colors.borderDark }]}>·</Text>
+          <Ionicons name="calendar-outline" size={12} color={colors.textMuted} />
           <Text style={[styles.metaYear, { color: colors.textMuted }]}>{work.year}</Text>
         </View>
 
@@ -167,13 +153,7 @@ function WorkCard({ work, onPress }: { work: Work; onPress: () => void }) {
             <View style={styles.statItem}>
               <Ionicons name="download-outline" size={13} color={colors.textMuted} />
               <Text style={[styles.statText, { color: colors.textMuted }]}>
-                {formatCount(work.downloadCount)}
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Ionicons name="eye-outline" size={13} color={colors.textMuted} />
-              <Text style={[styles.statText, { color: colors.textMuted }]}>
-                {formatCount(work.viewCount)}
+                {formatCount(work.downloads)}
               </Text>
             </View>
           </View>
@@ -197,23 +177,23 @@ export default function WorksScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [activeType, setActiveType] = useState<typeof FILTER_ALL | WorkType>(FILTER_ALL);
-  const [activeArea, setActiveArea] = useState<typeof FILTER_ALL | WorkArea>(FILTER_ALL);
+  const [activeTypeLabel, setActiveTypeLabel] = useState<string>(FILTER_ALL);
+  const [activeArea, setActiveArea] = useState<string>(FILTER_ALL);
 
-  const filtered = useMemo(() => {
-    return INITIAL_WORKS.filter((w) => {
-      const typeMatch = activeType === FILTER_ALL || w.type === activeType;
-      const areaMatch = activeArea === FILTER_ALL || w.area === activeArea;
-      return typeMatch && areaMatch;
-    });
-  }, [activeType, activeArea]);
+  const apiType =
+    activeTypeLabel === FILTER_ALL ? 'all' : WORK_LABEL_TO_API[activeTypeLabel] ?? 'all';
+  const apiArea = activeArea === FILTER_ALL ? 'all' : activeArea;
+
+  const { data: works, isLoading, isError, refetch } = useWorks(apiType, apiArea);
 
   const bottomPad = Math.max(insets.bottom, 8) + 16 + 72 + 12;
 
-  const handlePress = (work: Work) => {
+  const handlePress = (work: ApiWork) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/(app)/work/${work.id}` as any);
   };
+
+  const hasFilters = activeTypeLabel !== FILTER_ALL || activeArea !== FILTER_ALL;
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -222,7 +202,7 @@ export default function WorksScreen() {
         <View>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Trabalhos</Text>
           <Text style={[styles.headerSub, { color: colors.textMuted }]}>
-            {INITIAL_WORKS.length} publicações na plataforma
+            {works?.length ?? 0} publicações na plataforma
           </Text>
         </View>
         <Pressable
@@ -241,14 +221,14 @@ export default function WorksScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContainer}
         >
-          {TYPES.map((type) => (
+          {TYPE_LABELS.map((label) => (
             <FilterChip
-              key={type}
-              label={type}
-              active={activeType === type}
+              key={label}
+              label={label}
+              active={activeTypeLabel === label}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setActiveType(type as any);
+                setActiveTypeLabel(label);
               }}
             />
           ))}
@@ -261,14 +241,14 @@ export default function WorksScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filtersContainer}
         >
-          {AREAS.map((area) => (
+          {AREA_LABELS.map((area) => (
             <FilterChip
               key={area}
               label={area}
               active={activeArea === area}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setActiveArea(area as any);
+                setActiveArea(area);
               }}
             />
           ))}
@@ -276,15 +256,15 @@ export default function WorksScreen() {
       </View>
 
       {/* Results count */}
-      {(activeType !== FILTER_ALL || activeArea !== FILTER_ALL) && (
+      {hasFilters && (
         <View style={[styles.resultsBar, { borderBottomColor: colors.borderDark }]}>
           <Text style={[styles.resultsText, { color: colors.textMuted }]}>
-            {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+            {works?.length ?? 0} resultado{(works?.length ?? 0) !== 1 ? 's' : ''}
           </Text>
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              setActiveType(FILTER_ALL);
+              setActiveTypeLabel(FILTER_ALL);
               setActiveArea(FILTER_ALL);
             }}
             hitSlop={8}
@@ -299,7 +279,24 @@ export default function WorksScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.listContainer, { paddingBottom: bottomPad }]}
       >
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : isError ? (
+          <View style={styles.centered}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
+            <Text style={[styles.errorText, { color: colors.textMuted }]}>
+              Erro ao carregar trabalhos.
+            </Text>
+            <Pressable
+              onPress={() => refetch()}
+              style={[styles.retryBtn, { borderColor: colors.primary }]}
+            >
+              <Text style={[styles.retryText, { color: colors.primary }]}>Tentar novamente</Text>
+            </Pressable>
+          </View>
+        ) : (works ?? []).length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={48} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
@@ -307,11 +304,23 @@ export default function WorksScreen() {
             </Text>
           </View>
         ) : (
-          filtered.map((work) => (
+          (works ?? []).map((work) => (
             <WorkCard key={work.id} work={work} onPress={() => handlePress(work)} />
           ))
         )}
       </ScrollView>
+
+      {/* FAB */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', right: 20, bottom: Math.max(insets.bottom, 8) + 16 + 72 + 16 }}>
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(app)/create-work' as any); }}
+          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+        >
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 10 }}>
+            <Ionicons name="add" size={30} color="#fff" />
+          </View>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -463,13 +472,6 @@ const styles = StyleSheet.create({
     gap: 5,
     marginBottom: 8,
   },
-  metaText: {
-    fontSize: 12,
-    flex: 1,
-  },
-  metaSep: {
-    fontSize: 12,
-  },
   metaYear: {
     fontSize: 12,
     fontWeight: '600',
@@ -568,6 +570,27 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     backgroundColor: 'rgba(255,255,255,0.04)',
+  },
+
+  // Centered (loading / error)
+  centered: {
+    alignItems: 'center',
+    paddingTop: 60,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+  },
+  retryBtn: {
+    marginTop: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Empty

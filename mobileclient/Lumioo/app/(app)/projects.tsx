@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
+  ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,35 +14,37 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/contexts/ThemeContext';
 import {
-  INITIAL_PROJECTS,
-  AREA_CONFIG,
-  type Project,
-  type ProjectArea,
-} from '@/constants/projectsData';
-import type { User } from '@/constants/feedData';
+  useProjects,
+  getCategoryConfig,
+  PROJECT_ACCENT,
+  type ApiProject,
+} from '@/lib/hooks/useProjects';
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function lightColor(hex: string): string {
+  return PROJECT_ACCENT[hex] ?? '#e2e8f0';
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? '?';
+  return ((parts[0][0] ?? '') + (parts[parts.length - 1][0] ?? '')).toUpperCase();
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function Avatar({ user, size = 32 }: { user: User; size?: number }) {
+function ProjectCover({
+  coverColor,
+  areaIcon,
+  height = 148,
+}: {
+  coverColor: string;
+  areaIcon: string;
+  height?: number;
+}) {
   return (
-    <View
-      style={{
-        width: size, height: size, borderRadius: size / 2,
-        backgroundColor: user.avatarColor,
-        alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0,
-      }}
-    >
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize: size * 0.36 }}>
-        {user.initials}
-      </Text>
-    </View>
-  );
-}
-
-function ProjectCover({ project, height = 148 }: { project: Project; height?: number }) {
-  return (
-    <View style={{ height, backgroundColor: project.coverColor, overflow: 'hidden' }}>
+    <View style={{ height, backgroundColor: coverColor, overflow: 'hidden' }}>
       {/* Decorative circles */}
       <View style={styles.coverCircle1} />
       <View style={styles.coverCircle2} />
@@ -49,7 +52,7 @@ function ProjectCover({ project, height = 148 }: { project: Project; height?: nu
       {/* Icon */}
       <View style={styles.coverIconWrap}>
         <View style={styles.coverIconBg}>
-          <Ionicons name={project.areaIcon as any} size={34} color="rgba(255,255,255,0.88)" />
+          <Ionicons name={areaIcon as any} size={34} color="rgba(255,255,255,0.88)" />
         </View>
       </View>
     </View>
@@ -57,9 +60,7 @@ function ProjectCover({ project, height = 148 }: { project: Project; height?: nu
 }
 
 const FILTER_ALL = 'Todos';
-const AREAS: (typeof FILTER_ALL | ProjectArea)[] = [
-  FILTER_ALL, 'Computação', 'Medicina', 'Design', 'Física', 'Biologia', 'Engenharia',
-];
+const AREAS = [FILTER_ALL, 'Computação', 'Medicina', 'Design', 'Física', 'Biologia', 'Engenharia'];
 
 function FilterChip({
   label,
@@ -89,8 +90,11 @@ function FilterChip({
   );
 }
 
-function ProjectCard({ project, onPress }: { project: Project; onPress: () => void }) {
+type EnrichedProject = ApiProject & { coverColor: string; areaIcon: string; accent: string };
+
+function ProjectCard({ project, onPress }: { project: EnrichedProject; onPress: () => void }) {
   const { colors } = useTheme();
+  const isOpen = project.status === 'OPEN_FOR_APPLICATIONS';
 
   return (
     <Pressable
@@ -101,16 +105,16 @@ function ProjectCard({ project, onPress }: { project: Project; onPress: () => vo
       ]}
     >
       {/* Cover */}
-      <ProjectCover project={project} />
+      <ProjectCover coverColor={project.coverColor} areaIcon={project.areaIcon} />
 
       {/* Body */}
       <View style={styles.cardBody}>
         {/* Badges row */}
         <View style={styles.badgesRow}>
           <View style={[styles.areaBadge, { backgroundColor: `${project.coverColor}40` }]}>
-            <Ionicons name={project.areaIcon as any} size={11} color={project.coverColor === '#1e3a8a' ? '#93c5fd' : lightenCover(project.coverColor)} />
-            <Text style={[styles.areaBadgeText, { color: lightenCover(project.coverColor) }]}>
-              {project.area}
+            <Ionicons name={project.areaIcon as any} size={11} color={project.accent} />
+            <Text style={[styles.areaBadgeText, { color: project.accent }]}>
+              {project.category}
             </Text>
           </View>
 
@@ -118,7 +122,7 @@ function ProjectCard({ project, onPress }: { project: Project; onPress: () => vo
             style={[
               styles.membersBadge,
               {
-                backgroundColor: project.acceptingMembers
+                backgroundColor: isOpen
                   ? 'rgba(16,185,129,0.12)'
                   : 'rgba(100,116,139,0.15)',
               },
@@ -127,16 +131,16 @@ function ProjectCard({ project, onPress }: { project: Project; onPress: () => vo
             <View
               style={[
                 styles.membersDot,
-                { backgroundColor: project.acceptingMembers ? '#10b981' : colors.textMuted },
+                { backgroundColor: isOpen ? '#10b981' : colors.textMuted },
               ]}
             />
             <Text
               style={[
                 styles.membersBadgeText,
-                { color: project.acceptingMembers ? '#10b981' : colors.textMuted },
+                { color: isOpen ? '#10b981' : colors.textMuted },
               ]}
             >
-              {project.acceptingMembers ? 'Aceita membros' : 'Equipe completa'}
+              {isOpen ? 'Aceita membros' : 'Equipe completa'}
             </Text>
           </View>
         </View>
@@ -146,21 +150,28 @@ function ProjectCard({ project, onPress }: { project: Project; onPress: () => vo
           {project.title}
         </Text>
 
-        {/* Author */}
+        {/* Author (institution = author fullName per API) */}
         <View style={styles.authorRow}>
-          <Avatar user={project.author} size={20} />
-          <Text style={[styles.authorName, { color: colors.textMuted }]}>
-            {project.author.name}
-          </Text>
-          <Text style={[styles.authorSep, { color: colors.borderDark }]}>·</Text>
-          <Text style={[styles.authorInstitution, { color: colors.textMuted }]} numberOfLines={1}>
-            {project.author.institution}
+          <View
+            style={{
+              width: 20, height: 20, borderRadius: 10,
+              backgroundColor: project.coverColor,
+              alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 7 }}>
+              {getInitials(project.institution)}
+            </Text>
+          </View>
+          <Text style={[styles.authorName, { color: colors.textMuted }]} numberOfLines={1}>
+            {project.institution}
           </Text>
         </View>
 
         {/* Description */}
         <Text style={[styles.cardDesc, { color: colors.textSecondary }]} numberOfLines={2}>
-          {project.shortDescription}
+          {project.description}
         </Text>
 
         {/* Footer */}
@@ -168,33 +179,13 @@ function ProjectCard({ project, onPress }: { project: Project; onPress: () => vo
           <View style={styles.membersCount}>
             <Ionicons name="people-outline" size={14} color={colors.textMuted} />
             <Text style={[styles.membersCountText, { color: colors.textMuted }]}>
-              {project.members.length} membro{project.members.length !== 1 ? 's' : ''}
+              {project.members} membro{project.members !== 1 ? 's' : ''}
             </Text>
-          </View>
-          <View style={styles.tagsRow}>
-            {project.tags.slice(0, 2).map((tag) => (
-              <View key={tag} style={[styles.tag, { backgroundColor: colors.containerLight }]}>
-                <Text style={[styles.tagText, { color: colors.textTertiary }]}>{tag}</Text>
-              </View>
-            ))}
           </View>
         </View>
       </View>
     </Pressable>
   );
-}
-
-// Lightens a hex color for text contrast on dark badge backgrounds
-function lightenCover(hex: string): string {
-  const map: Record<string, string> = {
-    '#1e3a8a': '#93c5fd',
-    '#7f1d1d': '#fca5a5',
-    '#4c1d95': '#c4b5fd',
-    '#713f12': '#fcd34d',
-    '#14532d': '#6ee7b7',
-    '#1e3a5f': '#7dd3fc',
-  };
-  return map[hex] ?? '#e2e8f0';
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
@@ -204,19 +195,24 @@ export default function ProjectsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
 
-  const [activeFilter, setActiveFilter] = useState<typeof FILTER_ALL | ProjectArea>(FILTER_ALL);
+  const [activeFilter, setActiveFilter] = useState<string>(FILTER_ALL);
 
-  const filtered = useMemo(
-    () =>
-      activeFilter === FILTER_ALL
-        ? INITIAL_PROJECTS
-        : INITIAL_PROJECTS.filter((p) => p.area === activeFilter),
-    [activeFilter]
-  );
+  const apiCategory = activeFilter === FILTER_ALL ? 'all' : activeFilter;
+  const { data: projects, isLoading, isError, refetch } = useProjects(apiCategory);
+
+  const enriched: EnrichedProject[] = (projects ?? []).map((p) => {
+    const cfg = getCategoryConfig(p.category);
+    return {
+      ...p,
+      coverColor: cfg.color,
+      areaIcon: cfg.icon,
+      accent: lightColor(cfg.color),
+    };
+  });
 
   const bottomPad = Math.max(insets.bottom, 8) + 16 + 72 + 12;
 
-  const handlePress = (project: Project) => {
+  const handlePress = (project: ApiProject) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/(app)/project/${project.id}` as any);
   };
@@ -228,7 +224,7 @@ export default function ProjectsScreen() {
         <View>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Projetos</Text>
           <Text style={[styles.headerSub, { color: colors.textMuted }]}>
-            {INITIAL_PROJECTS.length} projetos na plataforma
+            {projects?.length ?? 0} projetos na plataforma
           </Text>
         </View>
         <Pressable
@@ -269,7 +265,24 @@ export default function ProjectsScreen() {
           { paddingBottom: bottomPad },
         ]}
       >
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        ) : isError ? (
+          <View style={styles.centered}>
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
+            <Text style={[styles.errorText, { color: colors.textMuted }]}>
+              Erro ao carregar projetos.
+            </Text>
+            <Pressable
+              onPress={() => refetch()}
+              style={[styles.retryBtn, { borderColor: colors.primary }]}
+            >
+              <Text style={[styles.retryText, { color: colors.primary }]}>Tentar novamente</Text>
+            </Pressable>
+          </View>
+        ) : enriched.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="folder-open-outline" size={48} color={colors.textMuted} />
             <Text style={[styles.emptyText, { color: colors.textMuted }]}>
@@ -277,11 +290,23 @@ export default function ProjectsScreen() {
             </Text>
           </View>
         ) : (
-          filtered.map((project) => (
+          enriched.map((project) => (
             <ProjectCard key={project.id} project={project} onPress={() => handlePress(project)} />
           ))
         )}
       </ScrollView>
+
+      {/* FAB */}
+      <View pointerEvents="box-none" style={{ position: 'absolute', right: 20, bottom: Math.max(insets.bottom, 8) + 16 + 72 + 16 }}>
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); router.push('/(app)/create-project' as any); }}
+          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+        >
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 10 }}>
+            <Ionicons name="add" size={30} color="#fff" />
+          </View>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -403,12 +428,6 @@ const styles = StyleSheet.create({
   authorName: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  authorSep: {
-    fontSize: 12,
-  },
-  authorInstitution: {
-    fontSize: 12,
     flex: 1,
   },
   cardDesc: {
@@ -430,19 +449,6 @@ const styles = StyleSheet.create({
   },
   membersCountText: {
     fontSize: 12,
-  },
-  tagsRow: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '500',
   },
 
   // Cover decorations
@@ -482,6 +488,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.14)',
     borderRadius: 22,
     padding: 16,
+  },
+
+  // Centered (loading / error)
+  centered: {
+    alignItems: 'center',
+    paddingTop: 60,
+    gap: 12,
+  },
+  errorText: {
+    fontSize: 14,
+  },
+  retryBtn: {
+    marginTop: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  retryText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Empty
