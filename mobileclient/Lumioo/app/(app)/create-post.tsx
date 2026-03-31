@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import {
-  View, Text, Pressable, TextInput, Image,
-  ScrollView, ActivityIndicator, Alert,
+  View, Text, Pressable, TextInput, Image, Alert,
+  ScrollView, ActivityIndicator,
   KeyboardAvoidingView, Platform, StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import Avatar from '@/components/Avatar';
+import { ConfirmModal } from '@/components/modals';
 import api from '@/lib/api';
 
 // ─── Chips de localização / hashtag ──────────────────────────────────────────
@@ -47,6 +48,7 @@ export default function CreatePostScreen() {
   const [showLocationInput, setShowLocationInput] = useState(false);
   const [showHashtagInput, setShowHashtagInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const canSubmit = caption.trim().length > 0 && !isSubmitting;
   const charCount = caption.length;
@@ -92,8 +94,8 @@ export default function CreatePostScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Não foi possível publicar. Tente novamente.';
-      Alert.alert('Erro', msg);
+      const msg = err?.response?.data?.error ?? err?.response?.data?.message ?? 'Não foi possível publicar. Tente novamente.';
+      setErrorMsg(msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -312,6 +314,15 @@ export default function CreatePostScreen() {
           </Text>
         </View>
       </View>
+
+      <ConfirmModal
+        visible={!!errorMsg}
+        title="Erro ao publicar"
+        message={errorMsg}
+        confirmLabel="OK"
+        onConfirm={() => setErrorMsg('')}
+        onClose={() => setErrorMsg('')}
+      />
 
     </View>
   );
