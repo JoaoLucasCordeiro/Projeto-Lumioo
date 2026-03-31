@@ -21,7 +21,7 @@ export const signInSchema = z.object({
 
 export const createPostSchema = z.object({
   caption: z.string().min(1).max(2000),
-  image: z.string().min(1, 'Image is required.'),
+  image: z.string().optional(),
   location: z.string().max(200).optional(),
   hashtags: z.array(z.string()).optional().default([]),
 });

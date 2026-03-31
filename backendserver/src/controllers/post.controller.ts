@@ -56,16 +56,16 @@ export const createPost = async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'User not authenticated.' });
     }
     const { caption, image, location, hashtags } = req.body;
-    if (!caption || !image) {
-      return res.status(400).json({ error: 'Caption and image are required.' });
+    if (!caption) {
+      return res.status(400).json({ error: 'Caption is required.' });
     }
     const newPost = await prisma.post.create({
       data: {
         caption,
         image,
         location,
-        hashtags,
-        authorId: userId, 
+        hashtags: hashtags ?? [],
+        authorId: userId,
       },
     });
     res.status(201).json({

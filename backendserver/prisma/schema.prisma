@@ -70,7 +70,7 @@ model Message {
 model Post {
   id        String   @id @default(cuid())
   caption   String
-  image     String
+  image     String?
   location  String?
   hashtags  String[]
   createdAt DateTime @default(now())
