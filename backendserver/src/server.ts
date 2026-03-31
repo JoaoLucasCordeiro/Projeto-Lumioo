@@ -31,9 +31,12 @@ if (!process.env.FRONTEND_URL) {
 const app = express();
 const httpServer = http.createServer(app);
 
+// Suporta múltiplas origens separadas por vírgula (ex: "http://localhost:5173,http://localhost:8081")
+const allowedOrigins = (process.env.FRONTEND_URL ?? '').split(',').map((o) => o.trim());
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: allowedOrigins,
     methods: ['GET', 'POST'],
   },
 });
@@ -41,7 +44,7 @@ const io = new Server(httpServer, {
 initializeSocket(io);
 
 const corsOptions = {
-  origin: process.env.FRONTEND_URL,
+  origin: allowedOrigins,
   optionsSuccessStatus: 200,
 };
 
