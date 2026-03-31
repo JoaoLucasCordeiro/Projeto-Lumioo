@@ -183,14 +183,9 @@ export const getMyProfile = async (req: Request, res: Response) => {
 
 export const updateUser = async (req: Request, res: Response) => {
   const tokenUserId = req.user?.userId;
-  const { id } = req.params;
 
   if (!tokenUserId) {
     return res.status(403).json({ error: 'User not authenticated.' });
-  }
-
-  if (tokenUserId !== id) {
-    return res.status(403).json({ error: 'Forbidden: You can only update your own profile.' });
   }
 
   const { fullName, username, bio, avatar, coverPhoto } = req.body;
