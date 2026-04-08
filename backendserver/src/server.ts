@@ -13,6 +13,7 @@ import savedPostRoutes from './routes/savedPost.routes';
 import projectRoutes from './routes/project.routes';
 import workRoutes from './routes/work.routes';
 import chatRoutes from './routes/chat.routes';
+import followRoutes from './routes/follow.routes';
 import { initializeSocket } from './socket';
 import { errorHandler } from './middlewares/errorHandler.middleware';
 import { prisma } from './lib/prisma';
@@ -70,6 +71,7 @@ app.use('/api/v1/lumioo', savedPostRoutes);
 app.use('/api/v1/lumioo', projectRoutes);
 app.use('/api/v1/lumioo', workRoutes);
 app.use('/api/v1/lumioo', chatRoutes);
+app.use('/api/v1/lumioo', followRoutes);
 
 app.use(errorHandler);
 
