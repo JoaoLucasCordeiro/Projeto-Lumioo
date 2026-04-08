@@ -45,7 +45,7 @@ export function savePost(id: string): Promise<void> {
 
 export function createPost(payload: {
   caption: string;
-  image: string;
+  image?: string | null;
   location?: string | null;
   hashtags?: string[];
 }): Promise<Post> {

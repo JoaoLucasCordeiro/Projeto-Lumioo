@@ -34,7 +34,7 @@ interface PostProps {
   username: string;
   authorId: string;
   userImage: string | null;
-  image: string;
+  image: string | null;
   caption: string;
   likes: number;
   comments: number;
@@ -301,16 +301,27 @@ export function Post({
           </DropdownMenu>
         </div>
 
-        {/* Image */}
-        <Link to={`/post/${id}`} className="block">
-          <div className="aspect-square overflow-hidden bg-slate-800">
-            <img
-              src={image}
-              alt={caption}
-              className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-            />
-          </div>
-        </Link>
+        {/* Image — só renderiza se existir */}
+        {image && (
+          <Link to={`/post/${id}`} className="block">
+            <div className="aspect-square overflow-hidden bg-slate-800">
+              <img
+                src={image}
+                alt={caption}
+                className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+              />
+            </div>
+          </Link>
+        )}
+
+        {/* Caption — texto puro em destaque quando não há imagem */}
+        {!image && (
+          <Link to={`/post/${id}`} className="block px-4 pt-2 pb-1">
+            <p className="text-base text-slate-100 leading-relaxed whitespace-pre-wrap">
+              {caption}
+            </p>
+          </Link>
+        )}
 
         {/* Actions */}
         <div className="px-4 pt-3 pb-1 flex items-center justify-between">
@@ -360,26 +371,40 @@ export function Post({
           </button>
         </div>
 
-        {/* Caption */}
-        <div className="px-4 pb-4">
-          <p className="text-sm text-slate-300 leading-relaxed">
-            <Link
-              to={`/perfil/${username}`}
-              className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
-            >
-              {username}
-            </Link>
-            {caption}
-          </p>
-          {comments > 0 && (
+        {/* Caption compacta abaixo da imagem (só quando há foto) */}
+        {image && (
+          <div className="px-4 pb-4 pt-1">
+            <p className="text-sm text-slate-300 leading-relaxed">
+              <Link
+                to={`/perfil/${username}`}
+                className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
+              >
+                {username}
+              </Link>
+              {caption}
+            </p>
+            {comments > 0 && (
+              <Link
+                to={`/post/${id}`}
+                className="mt-1.5 inline-block text-xs text-slate-500 hover:text-red-400 transition-colors"
+              >
+                Ver todos os {comments.toLocaleString()} comentários
+              </Link>
+            )}
+          </div>
+        )}
+
+        {/* Link "ver comentários" para posts de texto puro */}
+        {!image && comments > 0 && (
+          <div className="px-4 pb-4">
             <Link
               to={`/post/${id}`}
-              className="mt-1.5 inline-block text-xs text-slate-500 hover:text-red-400 transition-colors"
+              className="text-xs text-slate-500 hover:text-red-400 transition-colors"
             >
               Ver todos os {comments.toLocaleString()} comentários
             </Link>
-          )}
-        </div>
+          </div>
+        )}
       </motion.article>
 
       {/* Delete confirmation — plain overlay, no Radix portal */}

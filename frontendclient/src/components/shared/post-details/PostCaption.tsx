@@ -10,17 +10,27 @@ interface PostCaptionProps {
 }
 
 export function PostCaption({ post, onLikePost }: PostCaptionProps) {
+  const isTextOnly = !post.image;
+
   return (
-    <div className="px-4 py-3 border-b border-white/[0.06]">
-      <p className="text-sm text-slate-300 leading-relaxed">
-        <Link
-          to={`/perfil/${post.username}`}
-          className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
-        >
-          {post.username}
-        </Link>
-        {post.caption}
-      </p>
+    <div className={`px-4 border-b border-white/[0.06] ${isTextOnly ? 'py-5' : 'py-3'}`}>
+      {isTextOnly ? (
+        // Texto puro: caption em destaque, sem prefixo de username
+        <p className="text-base text-slate-100 leading-relaxed whitespace-pre-wrap">
+          {post.caption}
+        </p>
+      ) : (
+        // Post com foto: caption compacta com username prefixado
+        <p className="text-sm text-slate-300 leading-relaxed">
+          <Link
+            to={`/perfil/${post.username}`}
+            className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"
+          >
+            {post.username}
+          </Link>
+          {post.caption}
+        </p>
+      )}
 
       <div className="flex items-center gap-4 mt-3">
         <button

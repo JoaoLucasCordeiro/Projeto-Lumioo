@@ -144,10 +144,14 @@ export function PostDetails() {
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.12, ease: 'easeOut' }}
-          className="bg-slate-900 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col md:flex-row"
+          className={`bg-slate-900 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl w-full flex ${
+            post.image
+              ? 'flex-col md:flex-row max-w-5xl h-[90vh] md:h-[80vh]'
+              : 'flex-col max-w-2xl h-[75vh]'
+          }`}
         >
-          <PostImage image={post.image} caption={post.caption} />
-          <div className="md:w-1/2 flex flex-col border-t md:border-t-0 md:border-l border-white/[0.06] min-h-0">
+          {post.image && <PostImage image={post.image} caption={post.caption} />}
+          <div className={`flex flex-col min-h-0 border-white/[0.06] ${post.image ? 'md:w-1/2 md:border-l border-t md:border-t-0' : 'w-full flex-1'}`}>
             <PostHeader post={post} onSavePost={handleSavePost} onClose={() => navigate(-1)} />
             <div className="flex-1 overflow-y-auto">
               <PostCaption post={post} onLikePost={handleLikePost} />
