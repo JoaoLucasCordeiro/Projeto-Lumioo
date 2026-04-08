@@ -18,10 +18,12 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
     headers,
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get('content-type');
+  const hasBody = contentType?.includes('application/json') && response.status !== 204;
+  const data = hasBody ? await response.json() : null;
 
   if (!response.ok) {
-    throw new Error(data.error || `Request failed with status ${response.status}`);
+    throw new Error(data?.error || `Request failed with status ${response.status}`);
   }
 
   return data as T;
