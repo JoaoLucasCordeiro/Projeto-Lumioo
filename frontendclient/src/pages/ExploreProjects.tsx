@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion";
 import { TrendingUp, Clock, Star, Code, Brain, Dna, Calculator, Server, Users } from "lucide-react";
 
@@ -47,6 +48,7 @@ const categoryMap: Record<string, string> = {
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function ExploreProjects() {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [filter, setFilter] = useState("all");
   const [projects, setProjects] = useState<Project[]>([]);
@@ -292,13 +294,40 @@ export default function ExploreProjects() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white/5 backdrop-blur-lg rounded-3xl border border-white/10 p-6 hover:scale-105 transition-transform h-full flex flex-col"
+                className="bg-white/5 backdrop-blur-lg rounded-3xl border border-white/10 overflow-hidden hover:scale-105 transition-transform h-full flex flex-col"
               >
-                <div className="flex justify-between items-start mb-4">
-                  <span className="px-3 py-1 rounded-full bg-red-900/20 border border-red-700/50 text-red-400 text-xs font-medium">
-                    {categoryMap[project.category] || project.category}
+                {/* Imagem do projeto */}
+                <div className="relative h-44 bg-slate-800 shrink-0">
+                  {project.image ? (
+                    <img
+                      src={project.image}
+                      alt={project.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Code size={40} className="text-slate-600" />
+                    </div>
+                  )}
+                  {/* Status badge sobre a imagem */}
+                  <span className={`absolute top-3 right-3 px-2 py-1 rounded-full text-xs font-semibold border backdrop-blur-sm
+                    ${project.status === 'OPEN_FOR_APPLICATIONS'
+                      ? 'bg-green-900/70 border-green-600/50 text-green-300'
+                      : project.status === 'IN_PROGRESS'
+                      ? 'bg-blue-900/70 border-blue-600/50 text-blue-300'
+                      : 'bg-slate-700/70 border-slate-500/50 text-slate-300'}`}
+                  >
+                    {project.status === 'OPEN_FOR_APPLICATIONS' ? 'Aberto' :
+                     project.status === 'IN_PROGRESS' ? 'Em andamento' : 'Concluído'}
                   </span>
-                  <div className="flex gap-2">
+                </div>
+
+                <div className="p-6 flex flex-col flex-grow">
+                  {/* Categoria + badges */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <span className="px-3 py-1 rounded-full bg-red-900/20 border border-red-700/50 text-red-400 text-xs font-medium">
+                      {categoryMap[project.category] || project.category}
+                    </span>
                     {project.isNew && (
                       <span className="px-2 py-1 rounded-full bg-blue-900/20 border border-blue-700/50 text-blue-400 text-xs font-medium flex items-center">
                         <Clock size={12} className="mr-1" /> Novo
@@ -310,23 +339,27 @@ export default function ExploreProjects() {
                       </span>
                     )}
                   </div>
-                </div>
-                
-                <h3 className="text-xl font-semibold text-slate-100 mb-3">{project.title}</h3>
-                <p className="text-slate-400 text-sm mb-4 flex-grow">{project.description}</p>
-                
-                <div className="flex justify-between items-center mt-auto pt-4 border-t border-white/10">
-                  <div className="flex items-center text-slate-400 text-sm">
-                    <Star size={16} className="mr-1 text-amber-400" fill="currentColor" />
-                    <span>{project.members * 12}</span> {/* Simulação de likes */}
+
+                  <h3 className="text-xl font-semibold text-slate-100 mb-2">{project.title}</h3>
+
+                  {project.institution && (
+                    <p className="text-xs text-slate-500 mb-2">por {project.institution}</p>
+                  )}
+
+                  <p className="text-slate-400 text-sm mb-4 flex-grow line-clamp-3">{project.description}</p>
+
+                  <div className="flex justify-between items-center mt-auto pt-4 border-t border-white/10">
+                    <div className="text-slate-400 text-sm">
+                      <Users size={16} className="inline mr-1 text-blue-400" />
+                      <span>{project.members} membros</span>
+                    </div>
+                    <button
+                      onClick={() => navigate('/login')}
+                      className="px-3 py-1 rounded-full bg-red-900/20 border border-red-700/50 text-red-400 text-xs font-medium hover:bg-red-900/30 transition-colors"
+                    >
+                      Participar
+                    </button>
                   </div>
-                  <div className="text-slate-400 text-sm">
-                    <Users size={16} className="inline mr-1 text-blue-400" />
-                    <span>{project.members} membros</span>
-                  </div>
-                  <button className="px-3 py-1 rounded-full bg-red-900/20 border border-red-700/50 text-red-400 text-xs font-medium hover:bg-red-900/30 transition-colors">
-                    Participar
-                  </button>
                 </div>
               </motion.div>
             ))}
