@@ -98,6 +98,8 @@ export const getMyProfile = async (req: Request, res: Response) => {
         _count: {
           select: {
             posts: true,
+            followers: true,
+            following: true,
           }
         },
         posts: {
@@ -142,8 +144,8 @@ export const getMyProfile = async (req: Request, res: Response) => {
       bio: userProfile.bio || '',
       avatar: userProfile.avatar,
       coverPhoto: userProfile.coverPhoto,
-      followers: 0,
-      following: 0,
+      followers: userProfile._count.followers,
+      following: userProfile._count.following,
       posts: userProfile._count.posts,
       userPosts: userProfile.posts.map((post: any) => ({
         id: post.id,
@@ -299,7 +301,7 @@ export const getUserProfileByUsername = async (req: Request, res: Response) => {
         avatar: true,
         coverPhoto: true,
         _count: {
-          select: { posts: true }
+          select: { posts: true, followers: true, following: true }
         },
         posts: {
           take: 20,
@@ -318,6 +320,32 @@ export const getUserProfileByUsername = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Profile not found.' });
     }
 
+    let isFollowing = false;
+    let isBlocked = false;
+
+    if (loggedInUserId) {
+      const [block, follow] = await Promise.all([
+        prisma.block.findFirst({
+          where: {
+            OR: [
+              { blockerId: loggedInUserId, blockedId: userProfile.id },
+              { blockerId: userProfile.id, blockedId: loggedInUserId },
+            ],
+          },
+        }),
+        prisma.follow.findUnique({
+          where: { followerId_followingId: { followerId: loggedInUserId, followingId: userProfile.id } },
+        }),
+      ]);
+
+      if (block) {
+        return res.status(404).json({ error: 'Profile not found.' });
+      }
+
+      isFollowing = !!follow;
+      isBlocked = false; // chegou aqui significa que não há bloqueio
+    }
+
     const formattedProfile = {
       id: userProfile.id,
       fullName: userProfile.fullName,
@@ -329,8 +357,10 @@ export const getUserProfileByUsername = async (req: Request, res: Response) => {
       avatar: userProfile.avatar,
       coverPhoto: userProfile.coverPhoto,
       posts: userProfile._count.posts,
-      followers: 0, 
-      following: 0, 
+      followers: userProfile._count.followers,
+      following: userProfile._count.following,
+      isFollowing,
+      isBlocked,
       userPosts: userProfile.posts.map((post: any) => ({
         id: post.id,
         username: post.author.username,
