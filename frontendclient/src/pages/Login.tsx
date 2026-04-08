@@ -41,7 +41,7 @@ export default function LoginPage() {
             <img
               src="/lumioo-logo.png"
               alt="Lumioo"
-              className="mx-auto h-20 w-auto"
+              className="mx-auto h-48 w-auto"
             />
           </Link>
         </div>
