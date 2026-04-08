@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Menu, Users, BookOpen, Calendar, Download, ArrowLeft } from "lucide-react";
+import { Menu, Users, BookOpen, Calendar, Download, ArrowLeft, MessageCircle } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,24 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/auth.context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchWorkById, downloadWork } from "@/api/works";
+import { createConversation } from "@/api/conversations";
 import { queryKeys } from "@/api/queryKeys";
 
 export function WorkDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const startChatMutation = useMutation({
+    mutationFn: (recipientId: string) => createConversation(recipientId),
+    onSuccess: (conversation) => navigate('/mensagens', { state: { conversationId: conversation.id } }),
+  });
+
+  const handleContact = (recipientId: string) => {
+    if (!user) { navigate('/login'); return; }
+    startChatMutation.mutate(recipientId);
+  };
 
   const { data: work, isLoading } = useQuery({
     queryKey: queryKeys.works.detail(id!),
@@ -143,11 +154,21 @@ export function WorkDetails() {
                   <h1 className="text-2xl md:text-3xl font-bold text-slate-100 mb-2">
                     {work.title}
                   </h1>
-                  <Link to={`/perfil/${work.authorUsername}`}>
-                    <p className="text-lg text-slate-300 mb-4 hover:text-red-400 transition-colors">
+                  <div className="flex items-center gap-3 mb-4">
+                    <Link to={`/perfil/${work.authorUsername}`} className="text-lg text-slate-300 hover:text-red-400 transition-colors">
                       {work.author}
-                    </p>
-                  </Link>
+                    </Link>
+                    {work.authorId && user?.username !== work.authorUsername && (
+                      <button
+                        onClick={() => handleContact(work.authorId!)}
+                        disabled={startChatMutation.isPending}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-red-900/20 border border-red-700/40 text-red-400 hover:bg-red-900/40 disabled:opacity-50 transition-colors"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        Enviar mensagem
+                      </button>
+                    )}
+                  </div>
                   <div className="flex flex-wrap items-center gap-4 text-slate-400 mb-4">
                     <div className="flex items-center space-x-1">
                       <Calendar className="h-4 w-4" />

@@ -24,6 +24,7 @@ export interface WorkDetailsData {
   title: string;
   author: string;
   authorUsername: string;
+  authorId?: string;
   type: string;
   area: string;
   year: string;

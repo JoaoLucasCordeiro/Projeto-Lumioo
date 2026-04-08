@@ -31,7 +31,7 @@ export interface ProjectDetailsData {
   institution: string;
   status: string;
   detailedDescription: string;
-  team: Array<{ name: string; role: string }>;
+  team: Array<{ name: string; role: string; userId?: string; username?: string; avatar?: string | null }>;
   publications: Array<{ title: string; conference?: string; journal?: string }>;
   ownerId: string;
 }
