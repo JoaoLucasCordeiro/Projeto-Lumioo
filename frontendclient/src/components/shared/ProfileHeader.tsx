@@ -4,8 +4,21 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
   Edit, Camera, MessageCircle, User, X, Info,
   GraduationCap, Building2, UserCheck, Mail, Calendar,
+  BookOpen, Code2, FlaskConical, Atom, Microscope, Lightbulb,
+  MoreHorizontal, ShieldOff,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { blockUser } from "@/api/follow";
+import { FollowButton } from "./FollowButton";
+import { FollowersModal } from "./FollowersModal";
 import type { UserProfileData } from "@/api/profile";
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -185,7 +198,7 @@ function EditModal({ initialData, onSave, onClose, isSaving }: {
             {draft.coverPhoto ? (
               <img src={draft.coverPhoto} alt="" className="w-full h-full object-cover" />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-850 to-slate-900" />
+              <DefaultCover />
             )}
             <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
               <button
@@ -286,6 +299,50 @@ function EditModal({ initialData, onSave, onClose, isSaving }: {
   );
 }
 
+// ─── Default cover ────────────────────────────────────────────────────────────
+
+const COVER_ICONS = [
+  { Icon: GraduationCap, top: "12%",  left: "4%",  size: 44, rotate: -15, opacity: 0.07 },
+  { Icon: BookOpen,      top: "55%",  left: "12%", size: 32, rotate:  10, opacity: 0.05 },
+  { Icon: Code2,         top: "18%",  left: "35%", size: 52, rotate:   8, opacity: 0.06 },
+  { Icon: FlaskConical,  top: "60%",  left: "50%", size: 28, rotate: -20, opacity: 0.05 },
+  { Icon: Atom,          top: "10%",  left: "68%", size: 56, rotate:  25, opacity: 0.07 },
+  { Icon: Lightbulb,     top: "65%",  left: "78%", size: 30, rotate:  -8, opacity: 0.05 },
+  { Icon: Microscope,    top: "20%",  left: "90%", size: 38, rotate:  12, opacity: 0.06 },
+  { Icon: BookOpen,      top: "48%",  left: "88%", size: 22, rotate: -15, opacity: 0.04 },
+];
+
+function DefaultCover() {
+  return (
+    <div className="w-full h-full relative overflow-hidden">
+      {/* Base gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-red-950/20 to-slate-900" />
+      {/* Accent streak */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-500/5 to-transparent" />
+      {/* Dot pattern */}
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.035) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      {/* Decorative icons */}
+      {COVER_ICONS.map(({ Icon, top, left, size, rotate, opacity }, i) => (
+        <div
+          key={i}
+          className="absolute pointer-events-none"
+          style={{ top, left, opacity, transform: `rotate(${rotate}deg)` }}
+        >
+          <Icon style={{ width: size, height: size }} className="text-white" />
+        </div>
+      ))}
+      {/* Bottom fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-900/60 to-transparent" />
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface ProfileHeaderProps {
@@ -299,16 +356,29 @@ interface ProfileHeaderProps {
 export function ProfileHeader({ userData, isOwner, onSave, isSaving, onSendMessage }: ProfileHeaderProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
+  const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
+  const [followersModal, setFollowersModal] = useState<'followers' | 'following' | null>(null);
+
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+
+  const blockMutation = useMutation({
+    mutationFn: () => blockUser(userData.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      navigate('/feed');
+    },
+  });
 
   return (
     <>
       <div>
         {/* Cover */}
-        <div className="relative h-36 md:h-48 overflow-hidden bg-slate-800">
+        <div className="relative h-36 md:h-48 overflow-hidden bg-slate-900">
           {userData.coverPhoto ? (
             <img src={userData.coverPhoto} alt="Capa" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800" />
+            <DefaultCover />
           )}
         </div>
 
@@ -333,14 +403,42 @@ export function ProfileHeader({ userData, isOwner, onSave, isSaving, onSendMessa
                   Editar Perfil
                 </button>
               ) : (
-                <button
-                  onClick={onSendMessage}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold
-                             bg-red-500 hover:bg-red-600 text-white transition-colors shadow-lg shadow-red-500/20"
-                >
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  Mensagem
-                </button>
+                <>
+                  <FollowButton
+                    userId={userData.id}
+                    initialIsFollowing={userData.isFollowing ?? false}
+                  />
+                  <button
+                    onClick={onSendMessage}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold
+                               border border-white/20 text-slate-200 hover:border-white/40 hover:text-white
+                               transition-colors"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Mensagem
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="p-2 rounded-full border border-white/20 text-slate-400
+                                         hover:border-white/40 hover:text-slate-200 transition-colors">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="bg-slate-800 border-white/[0.08] text-slate-200 w-48 rounded-xl"
+                    >
+                      <DropdownMenuItem
+                        onClick={() => setBlockConfirmOpen(true)}
+                        className="flex items-center gap-2 cursor-pointer rounded-lg text-red-400
+                                   focus:bg-red-500/10 focus:text-red-400 text-sm"
+                      >
+                        <ShieldOff className="h-4 w-4" />
+                        Bloquear @{userData.username}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
               )}
             </div>
           </div>
@@ -365,23 +463,29 @@ export function ProfileHeader({ userData, isOwner, onSave, isSaving, onSendMessa
             <p className="text-sm text-slate-400 leading-relaxed mt-2 mb-4 max-w-lg">{userData.bio}</p>
           )}
 
-          {/* Stats — no bottom border */}
+          {/* Stats */}
           <div className="flex items-center gap-5 py-4">
             <div className="flex items-baseline gap-1">
               <span className="text-sm font-bold text-slate-100">{userData.posts ?? 0}</span>
               <span className="text-xs text-slate-500">publicações</span>
             </div>
             {userData.followers !== undefined && (
-              <div className="flex items-baseline gap-1">
+              <button
+                onClick={() => setFollowersModal('followers')}
+                className="flex items-baseline gap-1 hover:opacity-75 transition-opacity"
+              >
                 <span className="text-sm font-bold text-slate-100">{userData.followers}</span>
                 <span className="text-xs text-slate-500">seguidores</span>
-              </div>
+              </button>
             )}
             {userData.following !== undefined && (
-              <div className="flex items-baseline gap-1">
+              <button
+                onClick={() => setFollowersModal('following')}
+                className="flex items-baseline gap-1 hover:opacity-75 transition-opacity"
+              >
                 <span className="text-sm font-bold text-slate-100">{userData.following}</span>
                 <span className="text-xs text-slate-500">seguindo</span>
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -413,6 +517,76 @@ export function ProfileHeader({ userData, isOwner, onSave, isSaving, onSendMessa
           />
         )}
       </AnimatePresence>
+
+      {/* Block confirmation */}
+      <AnimatePresence>
+        {blockConfirmOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={() => setBlockConfirmOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97, y: 12 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.97, y: 8 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="bg-slate-900 border border-white/[0.08] rounded-2xl w-full max-w-sm p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-center w-11 h-11 rounded-2xl bg-red-500/10 border border-red-500/20 mb-4">
+                <ShieldOff className="h-5 w-5 text-red-400" />
+              </div>
+              <h3 className="text-base font-bold text-slate-100 mb-1">
+                Bloquear @{userData.username}?
+              </h3>
+              <ul className="text-sm text-slate-400 space-y-1.5 mb-6 mt-3">
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-600 mt-0.5">•</span>
+                  Vocês deixarão de se seguir mutuamente
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-600 mt-0.5">•</span>
+                  Ele não poderá ver ou interagir com seu perfil
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-slate-600 mt-0.5">•</span>
+                  Você pode desfazer isso nas configurações
+                </li>
+              </ul>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setBlockConfirmOpen(false)}
+                  className="flex-1 px-4 py-2.5 rounded-full text-sm font-medium border border-white/[0.12]
+                             text-slate-300 hover:border-white/25 hover:text-white transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => { setBlockConfirmOpen(false); blockMutation.mutate(); }}
+                  disabled={blockMutation.isPending}
+                  className="flex-1 px-4 py-2.5 rounded-full text-sm font-semibold bg-red-600
+                             hover:bg-red-700 text-white disabled:opacity-50 transition-colors"
+                >
+                  {blockMutation.isPending ? 'Bloqueando…' : 'Bloquear'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Followers / Following modal */}
+      {followersModal && userData.id && (
+        <FollowersModal
+          userId={userData.id}
+          mode={followersModal}
+          onClose={() => setFollowersModal(null)}
+        />
+      )}
     </>
   );
 }

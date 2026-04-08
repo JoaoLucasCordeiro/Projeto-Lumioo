@@ -16,6 +16,8 @@ export interface UserProfileData {
   posts: number;
   followers: number;
   following: number;
+  isFollowing: boolean;
+  isBlocked: boolean;
   userPosts: Post[];
   savedPosts: Post[];
 }

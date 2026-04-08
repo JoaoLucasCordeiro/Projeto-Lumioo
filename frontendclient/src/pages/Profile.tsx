@@ -22,9 +22,14 @@ export function ProfilePage() {
   const isOwner = !username || user?.username === username;
   const queryKey = isOwner ? queryKeys.profile.own() : queryKeys.profile.byUsername(username!);
 
-  const { data: profileData, isLoading } = useQuery({
+  const { data: profileData, isLoading, error } = useQuery({
     queryKey,
     queryFn: () => (isOwner ? fetchOwnProfile() : fetchProfileByUsername(username!)),
+    retry: (failCount, err: Error) => {
+      // Não retentar em 404 (perfil bloqueado ou inexistente)
+      if (err.message.includes('404')) return false;
+      return failCount < 1;
+    },
   });
 
   const saveMutation = useMutation({
@@ -57,19 +62,27 @@ export function ProfilePage() {
     );
   }
 
-  if (!profileData) {
+  if (!profileData || error) {
+    const isBlocked = error?.message?.includes('404');
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="text-center px-6">
-          <h2 className="text-lg font-semibold text-slate-200 mb-2">Perfil não encontrado</h2>
-          <p className="text-sm text-slate-500 mb-6">
-            O perfil que você está procurando não existe ou não pôde ser carregado.
+        <div className="text-center px-6 max-w-xs">
+          <div className="w-14 h-14 rounded-2xl bg-slate-800/60 border border-white/[0.06] flex items-center justify-center mx-auto mb-5">
+            <span className="text-2xl">{isBlocked ? '🚫' : '👤'}</span>
+          </div>
+          <h2 className="text-base font-bold text-slate-100 mb-2">
+            {isBlocked ? 'Perfil indisponível' : 'Perfil não encontrado'}
+          </h2>
+          <p className="text-sm text-slate-500 mb-6 leading-relaxed">
+            {isBlocked
+              ? 'Este perfil não está disponível para você no momento.'
+              : 'O perfil que você está procurando não existe ou não pôde ser carregado.'}
           </p>
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/feed')}
             className="px-5 py-2.5 rounded-full text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors"
           >
-            Voltar
+            Voltar ao feed
           </button>
         </div>
       </div>

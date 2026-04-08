@@ -25,4 +25,8 @@ export const queryKeys = {
     detail: (id: string) => ['conversations', id] as const,
     messages: (id: string) => ['conversations', id, 'messages'] as const,
   },
+  follow: {
+    followers: (userId: string) => ['follow', 'followers', userId] as const,
+    following: (userId: string) => ['follow', 'following', userId] as const,
+  },
 };
