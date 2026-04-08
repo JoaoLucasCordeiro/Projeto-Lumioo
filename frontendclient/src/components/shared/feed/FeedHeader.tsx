@@ -37,16 +37,16 @@ export function FeedHeader({ variant = 'desktop', onNewPost }: FeedHeaderProps) 
       </div>
       
       {isMobile ? (
-        <Button 
-          variant="outline" 
-          className="border-red-500 text-red-400 hover:bg-red-900/20"
+        <Button
+          variant="outline"
+          className="rounded-full border-red-500 text-red-400 hover:bg-red-900/20"
           onClick={handleNewPostClick}
         >
           Novo Post
         </Button>
       ) : (
         <Button
-          className="bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300"
+          className="rounded-full bg-[#ff3131] hover:bg-red-600 text-white font-bold shadow-lg shadow-[#ff3131]/20 hover:shadow-[#ff3131]/40 transition-all duration-300"
           onClick={handleNewPostClick}
         >
           Novo Post
