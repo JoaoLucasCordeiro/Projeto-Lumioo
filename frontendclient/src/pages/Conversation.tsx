@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth.context';
 import { io, Socket } from 'socket.io-client';
 import { Sidebar } from '@/components/shared/Sidebar';
@@ -166,6 +167,7 @@ function NewConvDialog({ onClose, onCreated }: NewConvDialogProps) {
 export function ConversationsPage() {
   const { user, token } = useAuth();
   const queryClient = useQueryClient();
+  const location = useLocation();
 
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -173,12 +175,15 @@ export function ConversationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showNewConv, setShowNewConv] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  // mobile: show chat panel when a conv is selected
   const [showChatOnMobile, setShowChatOnMobile] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // ID vindo de navegação externa (ex: projeto/trabalho) — processado uma única vez
+  const pendingConvIdRef = useRef<string | null>(
+    (location.state as { conversationId?: string } | null)?.conversationId ?? null
+  );
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: queryKeys.conversations.list(),
@@ -193,6 +198,32 @@ export function ConversationsPage() {
       p.username.toLowerCase().includes(searchTerm.toLowerCase())
     );
   });
+
+  const selectConversation = useCallback(async (conv: Conversation) => {
+    setSelectedConv(conv);
+    setShowChatOnMobile(true);
+    setMessages([]);
+    setLoadingMessages(true);
+    try {
+      const history = await fetchMessages(conv.id);
+      setMessages(history);
+    } finally {
+      setLoadingMessages(false);
+    }
+    socketRef.current?.emit('joinConversation', conv.id);
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, []);
+
+  // Auto-selecionar conversa vinda de navegação externa
+  useEffect(() => {
+    const pending = pendingConvIdRef.current;
+    if (!pending || conversations.length === 0) return;
+    const found = conversations.find((c) => c.id === pending);
+    if (found) {
+      pendingConvIdRef.current = null;
+      selectConversation(found);
+    }
+  }, [conversations, selectConversation]);
 
   // Connect socket once
   useEffect(() => {
@@ -224,21 +255,6 @@ export function ConversationsPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const selectConversation = useCallback(async (conv: Conversation) => {
-    setSelectedConv(conv);
-    setShowChatOnMobile(true);
-    setMessages([]);
-    setLoadingMessages(true);
-    try {
-      const history = await fetchMessages(conv.id);
-      setMessages(history);
-    } finally {
-      setLoadingMessages(false);
-    }
-    socketRef.current?.emit('joinConversation', conv.id);
-    setTimeout(() => inputRef.current?.focus(), 100);
-  }, []);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
