@@ -19,6 +19,13 @@ export function ChatPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const { user, token } = useAuth();
   const navigate = useNavigate();
+
+  // Redireciona para o layout moderno de mensagens
+  useEffect(() => {
+    if (conversationId) {
+      navigate('/mensagens', { replace: true, state: { conversationId } });
+    }
+  }, [conversationId, navigate]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const socketRef = useRef<Socket | null>(null);
