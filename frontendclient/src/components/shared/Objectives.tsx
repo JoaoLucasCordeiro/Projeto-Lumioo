@@ -57,7 +57,7 @@ export default function Objectives() {
               transition={{ duration: 0.6, delay: idx * 0.15 }}
               className="relative overflow-hidden bg-slate-900/40 border border-white/[0.06] rounded-2xl p-8 hover:border-red-500/30 hover:bg-slate-800/40 transition-all duration-300"
             >
-              <span className="block text-8xl font-black text-white/[0.04] leading-none mb-4 select-none">
+              <span className="block text-8xl font-black leading-none mb-4 select-none text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-[#ff3131] opacity-40">
                 {obj.number}
               </span>
               <div className="w-8 h-0.5 bg-red-500 mb-4" />
