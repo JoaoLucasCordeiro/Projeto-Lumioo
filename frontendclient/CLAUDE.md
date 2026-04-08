@@ -26,20 +26,25 @@ See `.env.example` for reference. This is the backend API URL for all fetch requ
 - **Radix UI** (@radix-ui/* primitives) for accessible component foundations
 - **Shadcn/ui** - UI components built on Radix UI with Tailwind CSS
 - **React Router DOM 7** for client-side routing
+- **TanStack React Query v5** (`@tanstack/react-query`) for server state management and caching
 - **Framer Motion** for animations
 - **Socket.io-client** for real-time chat functionality
 
 ### Directory Structure
 ```
 src/
+├── api/                 # API layer: domain-specific fetch functions + shared client
+│   ├── client.ts        # apiFetch<T>() — central fetch wrapper (auth headers, error throw)
+│   ├── queryKeys.ts     # Centralized TanStack Query key factory for all domains
+│   ├── posts.ts / projects.ts / works.ts / profile.ts / conversations.ts
 ├── components/
 │   ├── ui/              # Shadcn/ui primitive components (button, card, dialog, etc.)
 │   └── shared/          # Application-specific components
 │       ├── feed/        # Feed-related components (FeedHeader, PostsList, etc.)
 │       └── post-details/ # Post detail components (comments, forms, etc.)
 ├── contexts/            # React Context providers (authentication)
-├── hooks/              # Custom React hooks (useDebounce, useTimeAgo)
-├── lib/                # Utility functions
+├── hooks/              # Custom React hooks (useDebounce, useTimeAgo, useIntersectionObserver)
+├── lib/                # Utility functions + queryClient.ts (TanStack Query instance)
 ├── pages/              # Route/page components
 ├── services/           # Service layer (auth.service.ts for token management)
 ├── types/              # TypeScript type definitions
@@ -58,8 +63,9 @@ The `@` alias is configured to resolve to `./src`:
 2. **Auth Context** (`src/contexts/auth.context.tsx`) provides:
    - `user`: Current user object
    - `token`: JWT token for API requests
-   - `login()` / `logout()` methods
+   - `login()` / `logout()` methods (logout calls `queryClient.clear()`)
    - `updateUserContext()` for updating user data
+   - `isLoading` / `error` for login state
 3. **Auth Service** (`src/services/auth.service.ts`) handles:
    - `saveAuthData()` / `clearAuthData()` for localStorage management
    - `getToken()` / `getUser()` for retrieving stored data
@@ -67,30 +73,28 @@ The `@` alias is configured to resolve to `./src`:
 4. There is no dedicated `ProtectedRoute` wrapper — auth checks are handled individually within each page component
 
 ### API Integration Pattern
-API calls use native `fetch()` with the following pattern:
-```typescript
-const API_URL = import.meta.env.VITE_API_URL;
+All API calls go through `src/api/client.ts` via `apiFetch<T>(path, options?)`, which automatically attaches the Bearer token and throws on non-OK responses. Domain-specific functions live in `src/api/`:
 
-const response = await fetch(`${API_URL}/endpoint`, {
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  },
-  method: 'GET/POST/PUT/DELETE',
-  body: JSON.stringify(data) // for POST/PUT
-});
+```typescript
+// src/api/posts.ts — example domain file
+import { apiFetch } from './client';
+export const getPost = (id: string) => apiFetch<PostDetailsData>(`/posts/${id}`);
 ```
+
+Never call `fetch()` directly in components or hooks — always go through `apiFetch` or a domain function.
 
 **Key endpoints:**
 - `/auth/signin` - User login
-- `/feed` - Feed posts with cursor-based pagination (query param: `?cursor=xxx`)
-- Chat endpoints use Socket.io for real-time messaging
+- `/feed` - Feed posts with cursor-based pagination (`?cursor=xxx`)
+- `/posts`, `/projects`, `/works`, `/profile`, `/conversations` — CRUD per domain
+- Chat uses Socket.io (not REST)
 
 ### State Management
 - **React Context API** for global authentication state
+- **TanStack React Query v5** for server state — use `useQuery` / `useMutation` for API calls; the shared `queryClient` is in `src/lib/queryClient.ts` (staleTime: 30s, gcTime: 5min, retry: 1)
+- **Query keys** are centralized in `src/api/queryKeys.ts` — always use these instead of inline string arrays to avoid cache key mismatches
 - **Component-level state** using `useState` for local UI state
-- **Custom hooks** for reusable logic (debouncing, time formatting)
-- Server state is managed with loading/error/success patterns
+- **Custom hooks** for reusable logic (`useDebounce`, `useTimeAgo`, `useIntersectionObserver`)
 
 ### Component Architecture
 - **UI Components** (`components/ui/`): Shadcn/ui primitives - Radix UI components styled with Tailwind CSS. These are low-level, reusable components.
