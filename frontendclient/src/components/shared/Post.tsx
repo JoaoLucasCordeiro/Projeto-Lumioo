@@ -227,7 +227,11 @@ export function Post({
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="group bg-slate-900/60 border border-white/[0.06] rounded-2xl overflow-hidden hover:border-white/[0.12] transition-all duration-300"
+        className={`group rounded-2xl overflow-hidden transition-all duration-300 ${
+          image
+            ? "bg-slate-900/60 border border-white/[0.06] hover:border-white/[0.12]"
+            : "bg-gradient-to-br from-slate-800/70 to-slate-900/80 border border-white/[0.08] hover:border-red-500/25 relative"
+        }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3">
@@ -248,7 +252,7 @@ export function Post({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors shrink-0">
+              <button className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-white/[0.06] transition-colors">
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
@@ -304,7 +308,7 @@ export function Post({
         {/* Image — só renderiza se existir */}
         {image && (
           <Link to={`/post/${id}`} className="block">
-            <div className="aspect-square overflow-hidden bg-slate-800">
+            <div className="aspect-video overflow-hidden bg-slate-800">
               <img
                 src={image}
                 alt={caption}
@@ -314,17 +318,21 @@ export function Post({
           </Link>
         )}
 
-        {/* Caption — texto puro em destaque quando não há imagem */}
+        {/* Caption — post de texto puro */}
         {!image && (
-          <Link to={`/post/${id}`} className="block px-4 pt-2 pb-1">
-            <p className="text-base text-slate-100 leading-relaxed whitespace-pre-wrap">
-              {caption}
-            </p>
-          </Link>
+          <>
+            {/* Accent bar */}
+            <div className="mx-4 h-px bg-gradient-to-r from-red-500/40 to-transparent mb-1" />
+            <Link to={`/post/${id}`} className="block px-5 py-4">
+              <p className="text-[15px] font-medium text-slate-100 leading-relaxed whitespace-pre-wrap line-clamp-6">
+                {caption}
+              </p>
+            </Link>
+          </>
         )}
 
         {/* Actions */}
-        <div className="px-4 pt-3 pb-1 flex items-center justify-between">
+        <div className={`flex items-center justify-between ${image ? 'px-4 pt-3 pb-1' : 'px-5 pt-3 pb-3'}`}>
           <div className="flex items-center gap-4">
             <button
               onClick={handleLike}
@@ -374,7 +382,7 @@ export function Post({
         {/* Caption compacta abaixo da imagem (só quando há foto) */}
         {image && (
           <div className="px-4 pb-4 pt-1">
-            <p className="text-sm text-slate-300 leading-relaxed">
+            <p className="text-sm text-slate-300 leading-relaxed line-clamp-2">
               <Link
                 to={`/perfil/${username}`}
                 className="font-semibold text-slate-100 hover:text-red-400 transition-colors mr-1.5"

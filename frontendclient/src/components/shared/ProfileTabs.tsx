@@ -72,7 +72,7 @@ export function ProfileTabs({ userPosts, savedPosts, isOwner }: ProfileTabsProps
               }
             />
           ) : (
-            <PostGrid posts={userPosts} isOwner={isOwner} />
+            <PostGrid posts={userPosts} />
           )
         ) : savedPosts.length === 0 ? (
           <EmptyState
@@ -80,7 +80,7 @@ export function ProfileTabs({ userPosts, savedPosts, isOwner }: ProfileTabsProps
             description="Quando você salvar publicações, elas aparecerão aqui."
           />
         ) : (
-          <PostGrid posts={savedPosts} isOwner={isOwner} />
+          <PostGrid posts={savedPosts} />
         )}
       </div>
     </div>
