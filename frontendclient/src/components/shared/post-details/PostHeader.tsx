@@ -18,7 +18,7 @@ export function PostHeader({ post, onSavePost, onClose }: PostHeaderProps) {
     <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] flex-shrink-0">
       <Link to={`/perfil/${post.username}`} className="flex items-center gap-3 min-w-0">
         <Avatar className="h-8 w-8 shrink-0 ring-1 ring-white/[0.08]">
-          <AvatarImage src={post.userImage} alt={post.username} />
+          <AvatarImage src={post.userImage ?? undefined} alt={post.username} />
           <AvatarFallback className="bg-slate-800 text-slate-300 text-xs font-semibold">
             {post.username.charAt(0).toUpperCase()}
           </AvatarFallback>

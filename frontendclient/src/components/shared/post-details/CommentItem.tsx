@@ -31,7 +31,7 @@ export function CommentItem({
   return (
     <div className="flex items-start gap-3 group">
       <Avatar className="h-7 w-7 shrink-0 ring-1 ring-white/[0.06]">
-        <AvatarImage src={comment.userImage} alt={comment.username} />
+        <AvatarImage src={comment.userImage ?? undefined} alt={comment.username} />
         <AvatarFallback className="bg-slate-800 text-slate-400 text-xs font-semibold">
           {comment.username.charAt(0).toUpperCase()}
         </AvatarFallback>
