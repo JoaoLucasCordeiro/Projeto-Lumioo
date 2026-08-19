@@ -15,8 +15,8 @@ router.get('/profile/:username', optionalAuthenticateToken, getUserProfileByUser
 
 // Rotas públicas
 router.post('/users', validateBody(createUserSchema), createUser);
-router.get('/users', getAllUsers);
-router.get('/users/:id', getUserById);
+router.get('/users', authenticateToken, getAllUsers);
+router.get('/users/:id', authenticateToken, getUserById);
 router.delete('/users/:id', authenticateToken, deleteUser);
 router.post('/profile/password', authenticateToken, changePassword);
 

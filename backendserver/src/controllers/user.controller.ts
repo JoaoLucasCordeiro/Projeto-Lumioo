@@ -40,8 +40,8 @@ export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, fullName: true, username: true, academicEmail: true,
-        institution: true, academicLevel: true, dateOfBirth: true,
+        id: true, fullName: true, username: true,
+        institution: true, academicLevel: true,
         bio: true, avatar: true, createdAt: true, updatedAt: true,
       }
     });
@@ -58,8 +58,8 @@ export const getUserById = async (req: Request, res: Response) => {
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
-        id: true, fullName: true, username: true, academicEmail: true,
-        institution: true, academicLevel: true, dateOfBirth: true,
+        id: true, fullName: true, username: true,
+        institution: true, academicLevel: true,
         bio: true, avatar: true, createdAt: true, updatedAt: true,
       }
     });
