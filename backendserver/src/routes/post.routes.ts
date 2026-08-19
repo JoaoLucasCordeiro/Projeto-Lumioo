@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createPost, getAllPosts, getPostById, updatePost, deletePost, getFeedPosts } from '../controllers/post.controller';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { optionalAuthenticateToken } from '../middlewares/optionalAuth.middleware';
+import { writeLimiter } from '../middlewares/rateLimit.middleware';
 import { validateBody } from '../lib/validate';
 import { createPostSchema } from '../lib/schemas';
 
@@ -11,7 +12,7 @@ const router = Router();
 router.get('/posts', optionalAuthenticateToken, getAllPosts);
 
 // Rotas protegidas
-router.post('/posts', authenticateToken, validateBody(createPostSchema), createPost);
+router.post('/posts', authenticateToken, writeLimiter, validateBody(createPostSchema), createPost);
 router.put('/posts/:id', authenticateToken, updatePost);
 router.delete('/posts/:id', authenticateToken, deletePost);
 router.get('/feed', authenticateToken, getFeedPosts);

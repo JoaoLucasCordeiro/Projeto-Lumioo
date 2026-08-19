@@ -30,6 +30,9 @@ if (!process.env.FRONTEND_URL) {
 }
 
 const app = express();
+// Atrás do Nginx em produção (ver docs/DEPLOY_VPS.md); sem isso, express-rate-limit e req.ip
+// enxergam o IP do proxy reverso, não o do cliente real.
+app.set('trust proxy', 1);
 const httpServer = http.createServer(app);
 
 // Suporta múltiplas origens separadas por vírgula (ex: "http://localhost:5173,http://localhost:8081")

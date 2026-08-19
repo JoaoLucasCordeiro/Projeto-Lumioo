@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { createUser, deleteUser, getAllUsers, getUserById, updateUser, getMyProfile, changePassword, getUserProfileByUsername } from '../controllers/user.controller';
 import { authenticateToken } from '../middlewares/auth.middleware';
 import { optionalAuthenticateToken } from '../middlewares/optionalAuth.middleware';
+import { accountActionLimiter } from '../middlewares/rateLimit.middleware';
 import { validateBody } from '../lib/validate';
 import { createUserSchema } from '../lib/schemas';
 
@@ -14,11 +15,11 @@ router.put('/profile', authenticateToken, updateUser);
 router.get('/profile/:username', optionalAuthenticateToken, getUserProfileByUsername);
 
 // Rotas públicas
-router.post('/users', validateBody(createUserSchema), createUser);
+router.post('/users', accountActionLimiter, validateBody(createUserSchema), createUser);
 router.get('/users', authenticateToken, getAllUsers);
 router.get('/users/:id', authenticateToken, getUserById);
 router.delete('/users/:id', authenticateToken, deleteUser);
-router.post('/profile/password', authenticateToken, changePassword);
+router.post('/profile/password', authenticateToken, accountActionLimiter, changePassword);
 
 
 export default router;
