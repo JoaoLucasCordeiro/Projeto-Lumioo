@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, Image, User, Mail, Phone, Plus, Trash2, AlertCircle, Tag } from "lucide-react";
+import { X, Image, User, Mail, Phone, Plus, Trash2, AlertCircle, Tag, MapPin, Building2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FeedLayout } from "@/components/shared/feed/FeedLayout";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createProject } from "@/api/projects";
+import { BRAZILIAN_UF_CODES, COUNTRY_OPTIONS } from "@/api/works";
 
 const STATUS_MAP = {
   "em_andamento": "IN_PROGRESS",
@@ -35,10 +36,15 @@ export function NewProjectPage() {
     status: "em_andamento" as "em_andamento" | "concluido" | "aberto_inscricoes",
     contactEmail: "",
     contactPhone: "",
+    campus: "",
+    city: "",
+    state: "",
+    country: "Brasil",
   });
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([
     { id: crypto.randomUUID(), name: "", role: "", photo: null }
   ]);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -104,8 +110,19 @@ export function NewProjectPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.city.trim()) {
+      setFormError("A cidade é obrigatória.");
+      return;
+    }
+    if (formData.country === "Brasil" && !formData.state) {
+      setFormError("Selecione o estado (UF) para projetos no Brasil.");
+      return;
+    }
+    setFormError(null);
     mutation.mutate();
   };
+
+  const error = formError || (mutation.isError ? (mutation.error as Error).message : null);
 
   return (
     <FeedLayout mobileSidebarOpen={false} setMobileSidebarOpen={() => {}}>
@@ -174,6 +191,99 @@ export function NewProjectPage() {
               </div>
 
               <div className="mb-4">
+                <Label htmlFor="campus" className="text-slate-300 mb-2 block">
+                  Campus (opcional)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="campus"
+                    type="text"
+                    value={formData.campus}
+                    onChange={(e) => setFormData({ ...formData, campus: e.target.value })}
+                    placeholder="Nome do campus"
+                    className="bg-slate-800/30 border-slate-700 text-slate-100 pl-9"
+                  />
+                  <div className="absolute left-3 top-3">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="city" className="text-slate-300 mb-2 block">
+                    Cidade *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="city"
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="Cidade"
+                      className="bg-slate-800/30 border-slate-700 text-slate-100 pl-9"
+                      required
+                    />
+                    <div className="absolute left-3 top-3">
+                      <MapPin className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="country" className="text-slate-300 mb-2 block">
+                    País *
+                  </Label>
+                  <Select
+                    value={formData.country}
+                    onValueChange={(value) => setFormData({ ...formData, country: value })}
+                    required
+                  >
+                    <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
+                      <SelectValue placeholder="Selecione o país" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
+                      {COUNTRY_OPTIONS.map((country) => (
+                        <SelectItem
+                          key={country}
+                          value={country}
+                          className="hover:bg-slate-700/50 focus:bg-slate-700/50"
+                        >
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.country === "Brasil" && (
+                  <div>
+                    <Label htmlFor="state" className="text-slate-300 mb-2 block">
+                      Estado (UF) *
+                    </Label>
+                    <Select
+                      value={formData.state}
+                      onValueChange={(value) => setFormData({ ...formData, state: value })}
+                      required
+                    >
+                      <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
+                        {BRAZILIAN_UF_CODES.map((uf) => (
+                          <SelectItem
+                            key={uf}
+                            value={uf}
+                            className="hover:bg-slate-700/50 focus:bg-slate-700/50"
+                          >
+                            {uf}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <div className="mb-4">
                 <Label className="text-slate-300 mb-2 block">Imagem do Projeto (opcional)</Label>
                 {formData.image ? (
                   <div className="relative group">
@@ -239,7 +349,7 @@ export function NewProjectPage() {
                   <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
                     <SelectItem
                       value="em_andamento"
                       className="hover:bg-slate-700/50 focus:bg-slate-700/50"
@@ -408,11 +518,11 @@ export function NewProjectPage() {
                 ))}
               </div>
             </div>
-            {mutation.isError && (
+            {error && (
               <div className="p-6">
                 <div className="flex items-center p-3 text-sm text-red-400 bg-red-900/20 border border-red-800/50 rounded-lg">
                   <AlertCircle className="flex-shrink-0 inline w-5 h-5 mr-3" />
-                  <div>{(mutation.error as Error).message}</div>
+                  <div>{error}</div>
                 </div>
               </div>
             )}

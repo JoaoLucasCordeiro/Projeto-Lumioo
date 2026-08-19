@@ -13,7 +13,7 @@ interface WorksFiltersProps {
   selectedYear: string;
   setSelectedYear: (value: string) => void;
   workTypes: string[];
-  workAreas: string[];
+  workAreas: readonly { value: string; label: string }[];
   workYears: string[];
   onClearFilters: () => void;
 }
@@ -80,7 +80,7 @@ export function WorksFilters({
             <SelectContent className="bg-slate-800 border-slate-700">
               <SelectItem value="all" className="text-slate-100">Todas as áreas</SelectItem>
               {workAreas.map(area => (
-                <SelectItem key={area} value={area} className="text-slate-100">{area}</SelectItem>
+                <SelectItem key={area.value} value={area.value} className="text-slate-100">{area.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>

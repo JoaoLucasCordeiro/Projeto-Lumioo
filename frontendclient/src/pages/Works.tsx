@@ -10,7 +10,7 @@ import { WorksFilters } from "@/components/shared/WorksFilter";
 import { WorksGrid } from "@/components/shared/WroksGrid";
 import { useDebounce } from "@/hooks/useDebouce";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { fetchWorksPage } from "@/api/works";
+import { fetchWorksPage, WORK_AREA_OPTIONS } from "@/api/works";
 import { queryKeys } from "@/api/queryKeys";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 
@@ -49,13 +49,12 @@ export function WorksPage() {
     (hasNextPage ?? false) && !isFetchingNextPage
   );
 
-  const { workTypes, workYears, workAreas } = useMemo(() => {
+  const { workTypes, workYears } = useMemo(() => {
     const types = [...new Set(allWorks.map((work) => work.type))];
     const years = [...new Set(allWorks.map((work) => work.year))].sort((a, b) =>
       b.localeCompare(a)
     );
-    const areas = [...new Set(allWorks.map((work) => work.area))];
-    return { workTypes: types, workYears: years, workAreas: areas };
+    return { workTypes: types, workYears: years };
   }, [allWorks]);
 
   const handleClearFilters = () => {
@@ -110,7 +109,7 @@ export function WorksPage() {
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
             workTypes={workTypes}
-            workAreas={workAreas}
+            workAreas={WORK_AREA_OPTIONS}
             workYears={workYears}
             onClearFilters={handleClearFilters}
           />

@@ -7,6 +7,7 @@ interface WorksGridProps {
     title: string;
     author: string;
     type: string;
+    visibility: "PUBLIC" | "PRIVATE";
     year: string;
     abstract: string;
     keywords: string[];

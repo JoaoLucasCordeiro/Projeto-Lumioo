@@ -1,21 +1,38 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Menu, Users, BookOpen, Calendar, Download, ArrowLeft, MessageCircle } from "lucide-react";
+import { Menu, Users, BookOpen, Calendar, Download, ArrowLeft, MessageCircle, Lock, MapPin, Globe, Check, X as XIcon, Ban } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Sidebar } from "@/components/shared/Sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useAuth } from "@/contexts/auth.context";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchWorkById, downloadWork } from "@/api/works";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchWorkById,
+  downloadWork,
+  requestWorkAccess,
+  getWorkAccessRequests,
+  respondToWorkAccessRequest,
+  WORK_AREA_LABELS,
+  type WorkAccessStatus,
+} from "@/api/works";
+import { ApiError } from "@/api/client";
 import { createConversation } from "@/api/conversations";
 import { queryKeys } from "@/api/queryKeys";
+
+const ACCESS_STATUS_LABELS: Record<WorkAccessStatus, string> = {
+  PENDING: "Pendente",
+  APPROVED: "Aprovado",
+  DENIED: "Negado",
+  REVOKED: "Revogado",
+};
 
 export function WorkDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { token, user } = useAuth();
+  const qc = useQueryClient();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const startChatMutation = useMutation({
@@ -28,10 +45,30 @@ export function WorkDetails() {
     startChatMutation.mutate(recipientId);
   };
 
-  const { data: work, isLoading } = useQuery({
+  const { data: work, isLoading, error: workError } = useQuery({
     queryKey: queryKeys.works.detail(id!),
     queryFn: () => fetchWorkById(id!),
     enabled: !!id,
+    retry: false,
+  });
+
+  const isOwner = !!user && !!work && user.username === work.authorUsername;
+
+  const requestAccessMutation = useMutation({
+    mutationFn: () => requestWorkAccess(id!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.works.detail(id!) }),
+  });
+
+  const { data: accessRequests } = useQuery({
+    queryKey: queryKeys.works.accessRequests(id!),
+    queryFn: () => getWorkAccessRequests(id!),
+    enabled: !!id && isOwner && work?.visibility === "PRIVATE",
+  });
+
+  const respondMutation = useMutation({
+    mutationFn: ({ requestId, status }: { requestId: string; status: "APPROVED" | "DENIED" | "REVOKED" }) =>
+      respondToWorkAccessRequest(id!, requestId, status),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.works.accessRequests(id!) }),
   });
 
   const downloadMutation = useMutation({
@@ -67,6 +104,73 @@ export function WorkDetails() {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <p className="text-slate-400">Carregando detalhes do trabalho...</p>
+      </div>
+    );
+  }
+
+  if (workError instanceof ApiError && workError.status === 403) {
+    const status = (workError.data as { accessRequestStatus?: WorkAccessStatus | null } | undefined)
+      ?.accessRequestStatus;
+
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <div className="mx-auto mb-4 h-14 w-14 rounded-full bg-red-900/20 border border-red-700/50 flex items-center justify-center">
+            <Lock className="h-6 w-6 text-red-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-slate-100 mb-2">Este trabalho é privado</h2>
+          <p className="text-slate-400 mb-6">
+            O autor restringiu o acesso a este trabalho. Solicite acesso para poder visualizá-lo e baixá-lo.
+          </p>
+
+          {!user && (
+            <Button
+              onClick={() => navigate('/login')}
+              className="bg-[#ff3131] hover:bg-red-600 text-white mb-4"
+            >
+              Entrar para solicitar acesso
+            </Button>
+          )}
+
+          {user && !status && (
+            <Button
+              onClick={() => requestAccessMutation.mutate()}
+              disabled={requestAccessMutation.isPending}
+              className="bg-[#ff3131] hover:bg-red-600 text-white mb-4"
+            >
+              {requestAccessMutation.isPending ? "Enviando..." : "Solicitar acesso"}
+            </Button>
+          )}
+
+          {user && status === "PENDING" && (
+            <p className="text-slate-300 bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 mb-4">
+              Seu pedido de acesso foi enviado e está aguardando aprovação do autor.
+            </p>
+          )}
+
+          {user && status === "DENIED" && (
+            <p className="text-slate-300 bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 mb-4">
+              Seu pedido de acesso a este trabalho foi negado.
+            </p>
+          )}
+
+          {user && status === "REVOKED" && (
+            <p className="text-slate-300 bg-slate-800/50 border border-slate-700/50 rounded-lg p-3 mb-4">
+              Seu acesso a este trabalho foi revogado.
+            </p>
+          )}
+
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/trabalhos')}
+              className="text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar para trabalhos
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -139,13 +243,22 @@ export function WorkDetails() {
                 alt={work.title}
                 className="w-full h-full object-cover"
               />
-              <div className="absolute bottom-4 left-4">
+              <div className="absolute bottom-4 left-4 flex gap-2">
                 <Badge
                   variant="outline"
                   className="bg-red-900/20 border-red-700/50 text-red-400"
                 >
                   {work.type}
                 </Badge>
+                {work.visibility === "PRIVATE" && (
+                  <Badge
+                    variant="outline"
+                    className="bg-slate-900/60 border-slate-600 text-slate-300 flex items-center gap-1"
+                  >
+                    <Lock className="h-3 w-3" />
+                    Privado
+                  </Badge>
+                )}
               </div>
             </div>
             <div className="p-6">
@@ -174,10 +287,12 @@ export function WorkDetails() {
                       <Calendar className="h-4 w-4" />
                       <span>{work.year}</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <BookOpen className="h-4 w-4" />
-                      <span>{work.area}</span>
-                    </div>
+                    {work.area && (
+                      <div className="flex items-center space-x-1">
+                        <BookOpen className="h-4 w-4" />
+                        <span>{WORK_AREA_LABELS[work.area] ?? work.area}</span>
+                      </div>
+                    )}
                     <div className="flex items-center space-x-1">
                       <Users className="h-4 w-4" />
                       <span>{displayDownloads.toLocaleString()} downloads</span>
@@ -219,6 +334,26 @@ export function WorkDetails() {
                   <h3 className="font-medium text-slate-100 mb-2">Tipo de Trabalho</h3>
                   <p className="text-slate-300">{work.type}</p>
                 </div>
+                {(work.city || work.state || work.country) && (
+                  <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+                    <h3 className="font-medium text-slate-100 mb-2 flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4" />
+                      Localização
+                    </h3>
+                    <p className="text-slate-300">
+                      {[work.campus, work.city, work.state, work.country].filter(Boolean).join(' — ')}
+                    </p>
+                  </div>
+                )}
+                {work.area && (
+                  <div className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50">
+                    <h3 className="font-medium text-slate-100 mb-2 flex items-center gap-1.5">
+                      <Globe className="h-4 w-4" />
+                      Área do Conhecimento
+                    </h3>
+                    <p className="text-slate-300">{WORK_AREA_LABELS[work.area] ?? work.area}</p>
+                  </div>
+                )}
               </div>
               <div className="mb-8">
                 <h2 className="text-xl font-semibold text-slate-100 mb-3">Palavras-chave</h2>
@@ -246,6 +381,79 @@ export function WorkDetails() {
                       </p>
                     ))}
                   </div>
+                </div>
+              )}
+              {isOwner && work.visibility === "PRIVATE" && (
+                <div>
+                  <h2 className="text-xl font-semibold text-slate-100 mb-3">Pedidos de Acesso</h2>
+                  {!accessRequests || accessRequests.length === 0 ? (
+                    <p className="text-slate-400">Nenhum pedido de acesso até o momento.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {accessRequests.map((req) => (
+                        <div
+                          key={req.id}
+                          className="bg-slate-800/30 rounded-lg p-4 border border-slate-700/50 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                        >
+                          <div>
+                            <Link
+                              to={`/perfil/${req.requester?.username}`}
+                              className="text-slate-100 font-medium hover:text-red-400 transition-colors"
+                            >
+                              {req.requester?.fullName ?? "Usuário"}
+                            </Link>
+                            <p className="text-sm text-slate-400">
+                              {req.requester?.institution}
+                              {req.requester?.username ? ` · @${req.requester.username}` : ''}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className="bg-slate-700/50 border-slate-600 text-slate-300"
+                            >
+                              {ACCESS_STATUS_LABELS[req.status]}
+                            </Badge>
+                            {req.status === "PENDING" && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 text-white hover:text-white hover:bg-green-700 border-none"
+                                  onClick={() => respondMutation.mutate({ requestId: req.id, status: "APPROVED" })}
+                                  disabled={respondMutation.isPending}
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Aprovar
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-700/50 text-red-400 hover:bg-red-900/20"
+                                  onClick={() => respondMutation.mutate({ requestId: req.id, status: "DENIED" })}
+                                  disabled={respondMutation.isPending}
+                                >
+                                  <XIcon className="h-4 w-4 mr-1" />
+                                  Negar
+                                </Button>
+                              </>
+                            )}
+                            {req.status === "APPROVED" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-700/50 text-red-400 hover:bg-red-900/20"
+                                onClick={() => respondMutation.mutate({ requestId: req.id, status: "REVOKED" })}
+                                disabled={respondMutation.isPending}
+                              >
+                                <Ban className="h-4 w-4 mr-1" />
+                                Revogar
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

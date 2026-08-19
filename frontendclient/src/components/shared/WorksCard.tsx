@@ -1,4 +1,4 @@
-import { Download, MoreHorizontal, Flag, Edit, Trash2, Bookmark, Mail } from "lucide-react";
+import { Download, MoreHorizontal, Flag, Edit, Trash2, Bookmark, Mail, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -30,6 +30,7 @@ interface WorkCardProps {
     title: string;
     author: string;
     type: string;
+    visibility: "PUBLIC" | "PRIVATE";
     year: string;
     abstract: string;
     keywords: string[];
@@ -147,7 +148,15 @@ export function WorkCard({ work }: WorkCardProps) {
 
         <CardContent className="p-4 flex-1">
           <div className="flex justify-between items-start mb-2">
-            <Badge variant="outline" className="bg-red-900/20 border-red-700/50 text-red-400">{work.type}</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-red-900/20 border-red-700/50 text-red-400">{work.type}</Badge>
+              {work.visibility === "PRIVATE" && (
+                <Badge variant="outline" className="bg-slate-700/50 border-slate-600 text-slate-300 flex items-center gap-1">
+                  <Lock className="h-3 w-3" />
+                  Privado
+                </Badge>
+              )}
+            </div>
             <span className="text-sm text-slate-400">{work.year}</span>
           </div>
           <h3 className="text-lg font-bold text-slate-100 mb-2 line-clamp-2">{work.title}</h3>

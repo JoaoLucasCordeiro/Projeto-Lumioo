@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { X, FileText, FileUp, User, BookOpen, Building, Hash, AlertCircle } from "lucide-react";
+import { X, FileText, FileUp, User, BookOpen, Building, Building2, MapPin, Hash, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FeedLayout } from "@/components/shared/feed/FeedLayout";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWork } from "@/api/works";
+import { createWork, WORK_AREA_OPTIONS, BRAZILIAN_UF_CODES, COUNTRY_OPTIONS } from "@/api/works";
 
 const WORK_TYPE_MAP: { [key: string]: string } = {
   "TCC": "TCC",
@@ -43,8 +43,14 @@ export function SubmitWorkPage() {
     description: "",
     advisor: "",
     institution: "",
+    campus: "",
+    city: "",
+    state: "",
+    country: "Brasil",
+    area: "",
     department: "",
     workType: "",
+    visibility: "PUBLIC" as "PUBLIC" | "PRIVATE",
     keywords: [] as string[],
     references: "",
     pdfFile: null as File | null
@@ -58,6 +64,7 @@ export function SubmitWorkPage() {
       const payload = {
         title: formData.title,
         workType: WORK_TYPE_MAP[formData.workType],
+        visibility: formData.visibility,
         coverImage: formData.coverImage,
         summary: formData.abstract,
         description: formData.description,
@@ -65,6 +72,11 @@ export function SubmitWorkPage() {
         references: formData.references.split('\n').filter((ref) => ref.trim() !== ''),
         advisor: formData.advisor,
         institution: formData.institution,
+        campus: formData.campus || undefined,
+        city: formData.city,
+        state: formData.country === 'Brasil' ? formData.state : undefined,
+        country: formData.country,
+        area: formData.area,
         department: formData.department,
         pdfFile: pdfBase64,
       };
@@ -124,6 +136,18 @@ export function SubmitWorkPage() {
     }
     if (formData.keywords.length < 3) {
       setFormError("Por favor, adicione pelo menos 3 palavras-chave.");
+      return;
+    }
+    if (!formData.area) {
+      setFormError("Selecione a área do conhecimento do trabalho.");
+      return;
+    }
+    if (!formData.city.trim()) {
+      setFormError("A cidade é obrigatória.");
+      return;
+    }
+    if (formData.country === "Brasil" && !formData.state) {
+      setFormError("Selecione o estado (UF) para trabalhos no Brasil.");
       return;
     }
     setFormError(null);
@@ -190,7 +214,7 @@ export function SubmitWorkPage() {
                   <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
                     <SelectValue placeholder="Selecione o tipo de trabalho" />
                   </SelectTrigger>
-                  <SelectContent className="bg-slate-800 border-slate-700">
+                  <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
                     {WORK_TYPES.map((type) => (
                       <SelectItem
                         key={type}
@@ -200,6 +224,53 @@ export function SubmitWorkPage() {
                         {type}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="area" className="text-slate-300 mb-2 block">
+                  Área do Conhecimento *
+                </Label>
+                <Select
+                  value={formData.area}
+                  onValueChange={(value) => handleInputChange('area', value)}
+                  required
+                >
+                  <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Selecione a área do conhecimento" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
+                    {WORK_AREA_OPTIONS.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        className="hover:bg-slate-700/50 focus:bg-slate-700/50"
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="visibility" className="text-slate-300 mb-2 block">
+                  Visibilidade *
+                </Label>
+                <Select
+                  value={formData.visibility}
+                  onValueChange={(value) => handleInputChange('visibility', value)}
+                  required
+                >
+                  <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
+                    <SelectValue placeholder="Selecione a visibilidade" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
+                    <SelectItem value="PUBLIC" className="hover:bg-slate-700/50 focus:bg-slate-700/50">
+                      Público — qualquer pessoa pode ver e baixar
+                    </SelectItem>
+                    <SelectItem value="PRIVATE" className="hover:bg-slate-700/50 focus:bg-slate-700/50">
+                      Privado — acesso apenas mediante aprovação
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -374,7 +445,7 @@ export function SubmitWorkPage() {
                   </div>
                 </div>
               </div>
-              <div>
+              <div className="mb-4">
                 <Label htmlFor="department" className="text-slate-300 mb-2 block">
                   Departamento/Faculdade (opcional)
                 </Label>
@@ -391,6 +462,97 @@ export function SubmitWorkPage() {
                     <BookOpen className="h-4 w-4 text-slate-400" />
                   </div>
                 </div>
+              </div>
+              <div className="mb-4">
+                <Label htmlFor="campus" className="text-slate-300 mb-2 block">
+                  Campus (opcional)
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="campus"
+                    type="text"
+                    value={formData.campus}
+                    onChange={(e) => handleInputChange('campus', e.target.value)}
+                    placeholder="Nome do campus"
+                    className="bg-slate-800/30 border-slate-700 text-slate-100 pl-9"
+                  />
+                  <div className="absolute left-3 top-3">
+                    <Building2 className="h-4 w-4 text-slate-400" />
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="city" className="text-slate-300 mb-2 block">
+                    Cidade *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="city"
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      placeholder="Cidade"
+                      className="bg-slate-800/30 border-slate-700 text-slate-100 pl-9"
+                      required
+                    />
+                    <div className="absolute left-3 top-3">
+                      <MapPin className="h-4 w-4 text-slate-400" />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="country" className="text-slate-300 mb-2 block">
+                    País *
+                  </Label>
+                  <Select
+                    value={formData.country}
+                    onValueChange={(value) => handleInputChange('country', value)}
+                    required
+                  >
+                    <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
+                      <SelectValue placeholder="Selecione o país" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
+                      {COUNTRY_OPTIONS.map((country) => (
+                        <SelectItem
+                          key={country}
+                          value={country}
+                          className="hover:bg-slate-700/50 focus:bg-slate-700/50"
+                        >
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.country === "Brasil" && (
+                  <div>
+                    <Label htmlFor="state" className="text-slate-300 mb-2 block">
+                      Estado (UF) *
+                    </Label>
+                    <Select
+                      value={formData.state}
+                      onValueChange={(value) => handleInputChange('state', value)}
+                      required
+                    >
+                      <SelectTrigger className="bg-slate-800/30 border-slate-700 text-slate-100">
+                        <SelectValue placeholder="UF" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-800 border-slate-700 text-slate-100">
+                        {BRAZILIAN_UF_CODES.map((uf) => (
+                          <SelectItem
+                            key={uf}
+                            value={uf}
+                            className="hover:bg-slate-700/50 focus:bg-slate-700/50"
+                          >
+                            {uf}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
             <div className="p-6">

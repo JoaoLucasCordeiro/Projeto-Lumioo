@@ -10,11 +10,21 @@ export const queryKeys = {
     list: (filters: { search: string; category: string; year: string }) =>
       ['projects', 'list', filters] as const,
     detail: (id: string) => ['projects', 'detail', id] as const,
+    stats: (params: { dimension: string; state?: string; country?: string }) =>
+      ['projects', 'stats', params] as const,
   },
   works: {
     list: (filters: { search: string; workType: string; year: string; area: string }) =>
       ['works', 'list', filters] as const,
     detail: (id: string) => ['works', 'detail', id] as const,
+    accessRequests: (id: string) => ['works', id, 'access-requests'] as const,
+    myAccessRequests: () => ['works', 'access-requests', 'mine'] as const,
+    stats: (params: { dimension: string; state?: string; country?: string }) =>
+      ['works', 'stats', params] as const,
+  },
+  map: {
+    locations: (params: { entity: string; workType: string; area: string; category: string }) =>
+      ['map', 'locations', params] as const,
   },
   profile: {
     own: () => ['profile', 'own'] as const,
