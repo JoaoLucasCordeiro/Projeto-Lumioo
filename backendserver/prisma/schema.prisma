@@ -23,35 +23,36 @@ model User {
   institution   String
   academicLevel AcademicLevel
   dateOfBirth   DateTime
-  bio           String?       @db.Text 
-  avatar        String?       @db.Text 
-  coverPhoto    String?       @db.Text 
+  bio           String?       @db.Text
+  avatar        String?       @db.Text
+  coverPhoto    String?       @db.Text
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  posts      Post[]
-  comments   Comment[]
-  likes      Like[]
-  savedPosts SavedPost[] @relation("SavedByUsers")
-  projects   Project[]
-  works      Work[]
-  conversations Conversation[] @relation("ConversationParticipants")
-  messages      Message[]
-  following   Follow[] @relation("Following")
-  followers   Follow[] @relation("Followers")
-  blocking    Block[]  @relation("Blocking")
-  blockedBy   Block[]  @relation("BlockedBy")
+  posts              Post[]
+  comments           Comment[]
+  likes              Like[]
+  savedPosts         SavedPost[]         @relation("SavedByUsers")
+  projects           Project[]
+  works              Work[]
+  workAccessRequests WorkAccessRequest[]
+  conversations      Conversation[]      @relation("ConversationParticipants")
+  messages           Message[]
+  following          Follow[]            @relation("Following")
+  followers          Follow[]            @relation("Followers")
+  blocking           Block[]             @relation("Blocking")
+  blockedBy          Block[]             @relation("BlockedBy")
 
   @@map("users")
 }
 
 model Conversation {
-  id        String    @id @default(cuid())
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  participants User[]      @relation("ConversationParticipants")
-  messages     Message[] 
+  participants User[]    @relation("ConversationParticipants")
+  messages     Message[]
 
   @@map("conversations")
 }
@@ -150,6 +151,10 @@ model Project {
   status       ProjectStatus
   contactEmail String?
   contactPhone String?
+  campus       String?
+  city         String?
+  state        String?
+  country      String?       @default("Brasil")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -158,6 +163,10 @@ model Project {
 
   teamMembers TeamMember[]
 
+  @@index([campus])
+  @@index([city])
+  @@index([state])
+  @@index([country])
   @@map("projects")
 }
 
@@ -179,6 +188,29 @@ enum WorkType {
   ARTICLE
   THESIS
   DISSERTATION
+}
+
+enum WorkVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum WorkAccessStatus {
+  PENDING
+  APPROVED
+  DENIED
+  REVOKED
+}
+
+enum WorkArea {
+  EXACT_EARTH_SCIENCES
+  BIOLOGICAL_SCIENCES
+  ENGINEERING
+  HEALTH_SCIENCES
+  AGRICULTURAL_SCIENCES
+  APPLIED_SOCIAL_SCIENCES
+  HUMANITIES
+  LINGUISTICS_LITERATURE_ARTS
 }
 
 model Follow {
@@ -204,19 +236,25 @@ model Block {
 }
 
 model Work {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
   workType    WorkType
+  visibility  WorkVisibility @default(PUBLIC)
   coverImage  String?
-  summary     String   @db.Text
-  description String   @db.Text
+  summary     String         @db.Text
+  description String         @db.Text
   keywords    String[]
   references  String[]
   advisor     String
   institution String
+  campus      String?
+  city        String?
+  state       String?
+  country     String         @default("Brasil")
+  area        WorkArea?
   department  String?
-  pdfFile     String   @db.Text
-  downloads   Int      @default(0)
+  pdfFile     String         @db.Text
+  downloads   Int            @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -224,5 +262,31 @@ model Work {
   author   User   @relation(fields: [authorId], references: [id])
   authorId String
 
+  accessRequests WorkAccessRequest[]
+
+  @@index([institution])
+  @@index([campus])
+  @@index([city])
+  @@index([state])
+  @@index([country])
+  @@index([area])
+  @@index([authorId])
   @@map("works")
+}
+
+model WorkAccessRequest {
+  id          String           @id @default(cuid())
+  status      WorkAccessStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  respondedAt DateTime?
+
+  work        Work   @relation(fields: [workId], references: [id], onDelete: Cascade)
+  workId      String
+  requester   User   @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  requesterId String
+
+  @@unique([workId, requesterId])
+  @@index([workId])
+  @@index([requesterId])
+  @@map("work_access_requests")
 }
