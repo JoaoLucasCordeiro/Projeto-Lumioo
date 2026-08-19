@@ -1,4 +1,4 @@
-import { Home, Bookmark, FileText, Folder, Settings, User, LogOut, MessageCircle } from 'lucide-react';
+import { Home, Bookmark, FileText, Folder, Settings, User, LogOut, MessageCircle, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -28,6 +28,7 @@ const navItems = [
   { icon: <FileText className="h-5 w-5" />, label: 'Posts', path: '/posts' },
   { icon: <Folder className="h-5 w-5" />, label: 'Trabalhos', path: '/trabalhos' },
   { icon: <Bookmark className="h-5 w-5" />, label: 'Projetos', path: '/projetos' },
+  { icon: <MapPin className="h-5 w-5" />, label: 'Mapa', path: '/mapa' },
   { icon: <MessageCircle className="h-5 w-5" />, label: 'Mensagens', path: '/mensagens' }, // Novo item
   { icon: <User className="h-5 w-5" />, label: 'Perfil', path: '/perfil' },
   { icon: <Settings className="h-5 w-5" />, label: 'Configurações', path: '/configuracoes' },

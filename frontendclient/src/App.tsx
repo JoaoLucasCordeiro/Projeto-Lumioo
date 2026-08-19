@@ -19,6 +19,7 @@ import ExploreProjects from './pages/ExploreProjects';
 import OurTeam from './pages/OurTeam';
 import { ChatPage } from './pages/Chat';
 import { ConversationsPage } from './pages/Conversation';
+import { MapPage } from './pages/Map';
 
 const App = () => {
   return (
@@ -44,6 +45,7 @@ const App = () => {
       <Route path="/novo-post" element={<NewPostPage />} />
       <Route path="/chat/:conversationId" element={<ChatPage />} />
       <Route path="/mensagens" element={<ConversationsPage />} />
+      <Route path="/mapa" element={<MapPage />} />
     </Routes>
   );
 }
