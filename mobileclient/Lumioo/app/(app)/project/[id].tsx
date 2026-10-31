@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,6 +24,11 @@ import {
   PROJECT_ACCENT,
 } from '@/lib/hooks/useProjects';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
+import { ConfirmModal, ActionSheet } from '@/components/modals';
+import api from '@/lib/api';
+import { createConversation } from '@/lib/chat';
+import { useChatSocket } from '@/lib/socket';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -124,28 +130,62 @@ function ChatModal({
   visible,
   author,
   authorUsername,
+  ownerId,
   onClose,
 }: {
   visible: boolean;
   author: string;
   authorUsername: string;
+  ownerId: string;
   onClose: () => void;
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { socket, connected } = useChatSocket();
   const [message, setMessage] = useState('');
   const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [convId, setConvId] = useState<string | null>(null);
 
-  const handleSend = () => {
-    if (!message.trim()) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setSent(true);
+  // Cria (ou reaproveita) a conversa com o autor e envia a primeira mensagem pelo socket
+  const handleSend = async () => {
+    const text = message.trim();
+    if (!text || sending) return;
+    if (!socket || !connected) {
+      Alert.alert('Sem conexão', 'Aguarde a conexão com o chat e tente novamente.');
+      return;
+    }
+    setSending(true);
+    try {
+      const conv = await createConversation(ownerId);
+      socket.emit('sendMessage', { conversationId: conv.id, text });
+      setConvId(conv.id);
+      setSent(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Alert.alert(
+        'Erro',
+        err?.response?.status === 400
+          ? 'Você não pode enviar mensagem para si mesmo.'
+          : 'Não foi possível enviar a mensagem. Tente novamente.',
+      );
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleClose = () => {
     setMessage('');
     setSent(false);
+    setConvId(null);
     onClose();
+  };
+
+  const openConversation = () => {
+    const id = convId;
+    handleClose();
+    if (id) router.push({ pathname: '/chat/[id]', params: { id } } as any);
   };
 
   const firstName = author.split(' ')[0] ?? author;
@@ -157,7 +197,7 @@ function ChatModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <Pressable style={styles.chatBackdrop} onPress={handleClose}>
-          <Pressable activeOpacity={1}>
+          <Pressable onPress={() => {}}>
             <View
               style={[
                 styles.chatSheet,
@@ -206,6 +246,12 @@ function ChatModal({
                     {firstName} receberá sua mensagem e poderá responder em breve.
                   </Text>
                   <Pressable
+                    onPress={openConversation}
+                    style={[styles.sentBtn, { backgroundColor: colors.primary, borderColor: colors.primary, marginBottom: 10 }]}
+                  >
+                    <Text style={[styles.sentBtnText, { color: '#fff' }]}>Abrir conversa</Text>
+                  </Pressable>
+                  <Pressable
                     onPress={handleClose}
                     style={[styles.sentBtn, { backgroundColor: colors.container, borderColor: colors.border }]}
                   >
@@ -250,16 +296,20 @@ function ChatModal({
                         opacity: pressed ? 0.85 : 1,
                       },
                     ]}
-                    disabled={message.trim().length === 0}
+                    disabled={message.trim().length === 0 || sending}
                   >
-                    <Ionicons name="send" size={18} color={message.trim().length > 0 ? '#fff' : colors.textMuted} />
+                    {sending ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Ionicons name="send" size={18} color={message.trim().length > 0 ? '#fff' : colors.textMuted} />
+                    )}
                     <Text
                       style={[
                         styles.chatSendText,
                         { color: message.trim().length > 0 ? '#fff' : colors.textMuted },
                       ]}
                     >
-                      Enviar mensagem
+                      {sending ? 'Enviando…' : 'Enviar mensagem'}
                     </Text>
                   </Pressable>
                 </>
@@ -280,9 +330,39 @@ export default function ProjectDetailScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { data: project, isLoading, isError } = useProjectDetail(id ?? '');
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: project, isLoading, isError, refetch } = useProjectDetail(id ?? '');
   const [chatVisible, setChatVisible] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Recarrega ao voltar da edição (a primeira montagem já busca sozinha)
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) { firstFocus.current = false; return; }
+      refetch();
+    }, [refetch]),
+  );
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/projects/${id}`);
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.removeQueries({ queryKey: ['project', id] });
+      setDeleteVisible(false);
+      router.back();
+    } catch (err: any) {
+      setDeleteVisible(false);
+      Alert.alert('Erro', err?.response?.data?.error ?? 'Não foi possível excluir o projeto.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const navBarHeight = Math.max(insets.bottom, 8) + 16 + 72;
   const ctaBarHeight = 72;
@@ -381,6 +461,18 @@ export default function ProjectDetailScreen() {
           >
             <Ionicons name="share-outline" size={20} color="#fff" />
           </Pressable>
+          {!!user && project.ownerId === user.id && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMenuVisible(true);
+              }}
+              hitSlop={10}
+              style={[styles.overlayBtn, { backgroundColor: 'rgba(15,23,42,0.65)' }]}
+            >
+              <Ionicons name="ellipsis-horizontal" size={20} color="#fff" />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -550,7 +642,38 @@ export default function ProjectDetailScreen() {
         visible={chatVisible}
         author={project.author}
         authorUsername={project.authorUsername}
+        ownerId={project.ownerId}
         onClose={() => setChatVisible(false)}
+      />
+
+      <ActionSheet
+        visible={menuVisible}
+        title="Opções do projeto"
+        actions={[
+          {
+            icon: 'create-outline',
+            label: 'Editar projeto',
+            onPress: () => router.push({ pathname: '/create-project', params: { id: project.id } }),
+          },
+          {
+            icon: 'trash-outline',
+            label: 'Excluir projeto',
+            destructive: true,
+            onPress: () => setDeleteVisible(true),
+          },
+        ]}
+        onClose={() => setMenuVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={deleteVisible}
+        title="Excluir projeto"
+        message="Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onClose={() => setDeleteVisible(false)}
       />
     </View>
   );

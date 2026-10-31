@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, Pressable, TextInput, Image, ScrollView,
   ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -13,6 +14,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { ConfirmModal } from '@/components/modals';
+import { LocationFields, SelectField } from '@/components/LocationFields';
+import {
+  WORK_AREA_OPTIONS, EMPTY_LOCATION, validateLocation, locationPayload, type LocationValue,
+} from '@/constants/geo';
 import api from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,6 +32,20 @@ const WORK_TYPE_MAP: Record<WorkType, string> = {
 };
 
 const WORK_TYPES: WorkType[] = ['TCC', 'Artigo', 'Tese', 'Dissertação'];
+
+const API_TO_WORK_TYPE: Record<string, WorkType> = {
+  TCC: 'TCC',
+  ARTICLE: 'Artigo',
+  THESIS: 'Tese',
+  DISSERTATION: 'Dissertação',
+};
+
+type Visibility = 'PUBLIC' | 'PRIVATE';
+
+const VISIBILITY_OPTIONS: { value: Visibility; label: string; hint: string }[] = [
+  { value: 'PUBLIC', label: 'Público', hint: 'Qualquer pessoa pode ver e baixar.' },
+  { value: 'PRIVATE', label: 'Privado', hint: 'Outros usuários precisam pedir acesso.' },
+];
 
 interface PdfFile {
   name: string;
@@ -51,6 +70,9 @@ export default function CreateWorkScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = !!editId;
 
   // Form state
   const [title, setTitle] = useState('');
@@ -60,6 +82,9 @@ export default function CreateWorkScreen() {
   const [advisor, setAdvisor] = useState('');
   const [institution, setInstitution] = useState(user?.institution ?? '');
   const [department, setDepartment] = useState('');
+  const [visibility, setVisibility] = useState<Visibility>('PUBLIC');
+  const [area, setArea] = useState('');
+  const [location, setLocation] = useState<LocationValue>(EMPTY_LOCATION);
 
   // Keywords
   const [keywords, setKeywords] = useState<string[]>([]);
@@ -69,18 +94,58 @@ export default function CreateWorkScreen() {
   const [references, setReferences] = useState<string[]>([]);
   const [referenceInput, setReferenceInput] = useState('');
 
-  // Cover image
+  // Cover image (em edição, `coverChanged` indica que precisa ir no PUT)
   const [coverImage, setCoverImage] = useState<{ uri: string; base64: string } | null>(null);
+  const [coverChanged, setCoverChanged] = useState(false);
 
   // PDF
   const [pdfFile, setPdfFile] = useState<PdfFile | null>(null);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  // Em edição o PDF já existe no servidor; só reenviamos se o usuário escolher outro
+  const [hasExistingPdf, setHasExistingPdf] = useState(false);
+  const [isLoadingWork, setIsLoadingWork] = useState(isEdit);
 
   // Submission
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // ── Carrega dados para edição ───────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!editId) return;
+    (async () => {
+      try {
+        const { data } = await api.get(`/works/${editId}`);
+        setTitle(data.title);
+        setWorkType(API_TO_WORK_TYPE[data.type] ?? '');
+        setSummary(data.abstract);
+        setDescription(data.detailedDescription);
+        setAdvisor(data.advisor);
+        setInstitution(data.institution);
+        setDepartment(data.department ?? '');
+        setVisibility(data.visibility ?? 'PUBLIC');
+        setArea(data.area ?? '');
+        setLocation({
+          campus: data.campus ?? '',
+          city: data.city ?? '',
+          state: data.state ?? '',
+          country: data.country ?? 'Brasil',
+        });
+        setKeywords(data.keywords ?? []);
+        setReferences(data.references ?? []);
+        if (data.image) setCoverImage({ uri: data.image, base64: data.image });
+        setHasExistingPdf(true);
+      } catch {
+        setErrorMsg('Não foi possível carregar o trabalho.');
+      } finally {
+        setIsLoadingWork(false);
+      }
+    })();
+  }, [editId]);
+
   // ── Validation ──────────────────────────────────────────────────────────────
+
+  const locationError = validateLocation(location);
 
   const canSubmit =
     title.trim().length > 0 &&
@@ -90,8 +155,11 @@ export default function CreateWorkScreen() {
     keywords.length >= 3 &&
     advisor.trim().length > 0 &&
     institution.trim().length > 0 &&
-    pdfFile !== null &&
-    !isSubmitting;
+    area !== '' &&
+    locationError === null &&
+    (pdfFile !== null || hasExistingPdf) &&
+    !isSubmitting &&
+    !isLoadingWork;
 
   // ── Keywords ────────────────────────────────────────────────────────────────
 
@@ -136,6 +204,7 @@ export default function CreateWorkScreen() {
         uri: result.assets[0].uri,
         base64: `data:image/jpeg;base64,${result.assets[0].base64}`,
       });
+      setCoverChanged(true);
     }
   };
 
@@ -171,23 +240,41 @@ export default function CreateWorkScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSubmitting(true);
     try {
-      await api.post('/works', {
+      const body = {
         title: title.trim(),
         workType: WORK_TYPE_MAP[workType as WorkType],
+        visibility,
+        area,
         summary: summary.trim(),
         description: description.trim(),
         keywords,
         references,
         advisor: advisor.trim(),
         institution: institution.trim(),
+        ...locationPayload(location),
         ...(department.trim() ? { department: department.trim() } : {}),
-        ...(coverImage ? { coverImage: coverImage.base64 } : {}),
-        pdfFile: pdfFile!.base64,
-      });
+      };
+      if (isEdit) {
+        await api.put(`/works/${editId}`, {
+          ...body,
+          // department vazio precisa limpar o valor existente
+          department: department.trim(),
+          ...(coverChanged && coverImage ? { coverImage: coverImage.base64 } : {}),
+          ...(pdfFile ? { pdfFile: pdfFile.base64 } : {}),
+        });
+      } else {
+        await api.post('/works', {
+          ...body,
+          ...(coverImage ? { coverImage: coverImage.base64 } : {}),
+          pdfFile: pdfFile!.base64,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['works'] });
+      queryClient.invalidateQueries({ queryKey: ['work'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err: any) {
-      setErrorMsg(err?.response?.data?.error ?? 'Erro ao publicar trabalho.');
+      setErrorMsg(err?.response?.data?.error ?? (isEdit ? 'Erro ao salvar trabalho.' : 'Erro ao publicar trabalho.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -211,7 +298,7 @@ export default function CreateWorkScreen() {
           <Ionicons name="close" size={20} color={colors.textSecondary} />
         </Pressable>
 
-        <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Novo trabalho</Text>
+        <Text style={[s.headerTitle, { color: colors.textPrimary }]}>{isEdit ? 'Editar trabalho' : 'Novo trabalho'}</Text>
 
         <Pressable
           onPress={handleSubmit}
@@ -220,7 +307,7 @@ export default function CreateWorkScreen() {
         >
           {isSubmitting
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={s.publishBtnText}>Publicar</Text>
+            : <Text style={s.publishBtnText}>{isEdit ? 'Salvar' : 'Publicar'}</Text>
           }
         </Pressable>
       </View>
@@ -243,7 +330,7 @@ export default function CreateWorkScreen() {
               placeholder="Título do trabalho"
               placeholderTextColor={colors.textMuted}
               maxLength={300}
-              autoFocus
+              autoFocus={!isEdit}
               autoCapitalize="sentences"
             />
           </Section>
@@ -271,6 +358,45 @@ export default function CreateWorkScreen() {
                 );
               })}
             </ScrollView>
+          </Section>
+
+          {/* ── Visibilidade ────────────────────────────────────────────── */}
+          <Section label="Visibilidade">
+            <View style={s.chipsRow}>
+              {VISIBILITY_OPTIONS.map(opt => {
+                const selected = visibility === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => setVisibility(opt.value)}
+                    style={[
+                      s.selectChip,
+                      selected
+                        ? { backgroundColor: colors.primary, borderColor: colors.primary }
+                        : { backgroundColor: colors.container, borderColor: border },
+                    ]}
+                  >
+                    <Text style={[s.selectChipText, { color: selected ? '#fff' : colors.textSecondary }]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text style={[s.helperText, { color: colors.textMuted }]}>
+              {VISIBILITY_OPTIONS.find(o => o.value === visibility)?.hint}
+            </Text>
+          </Section>
+
+          {/* ── Área do conhecimento ────────────────────────────────────── */}
+          <Section label="Área do conhecimento">
+            <SelectField
+              value={area}
+              options={WORK_AREA_OPTIONS}
+              placeholder="Selecione a área"
+              title="Área do conhecimento"
+              onChange={setArea}
+            />
           </Section>
 
           {/* ── Resumo ──────────────────────────────────────────────────── */}
@@ -391,6 +517,11 @@ export default function CreateWorkScreen() {
             />
           </Section>
 
+          {/* ── Localização ─────────────────────────────────────────────── */}
+          <Section label="Localização">
+            <LocationFields value={location} onChange={setLocation} />
+          </Section>
+
           {/* ── Referências ─────────────────────────────────────────────── */}
           <Section label="Referências (opcional)">
             <View style={s.addRow}>
@@ -434,8 +565,11 @@ export default function CreateWorkScreen() {
             {coverImage ? (
               <View style={s.imageWrapper}>
                 <Image source={{ uri: coverImage.uri }} style={s.imagePreview} resizeMode="cover" />
-                <Pressable onPress={() => setCoverImage(null)} style={s.imageRemoveBtn}>
-                  <Ionicons name="close" size={16} color="#fff" />
+                <Pressable
+                  onPress={isEdit ? pickCoverImage : () => setCoverImage(null)}
+                  style={s.imageRemoveBtn}
+                >
+                  <Ionicons name={isEdit ? 'swap-horizontal' : 'close'} size={16} color="#fff" />
                 </Pressable>
               </View>
             ) : (
@@ -456,6 +590,16 @@ export default function CreateWorkScreen() {
                 <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={[s.pickerBtnText, { color: colors.textMuted }]}>Carregando PDF...</Text>
               </View>
+            ) : !pdfFile && hasExistingPdf ? (
+              <View style={[s.pdfRow, { backgroundColor: colors.container, borderColor: border }]}>
+                <View style={[s.pdfIconBox, { backgroundColor: `${colors.primary}20` }]}>
+                  <Ionicons name="document-text" size={20} color={colors.primary} />
+                </View>
+                <Text style={[s.pdfName, { color: colors.textPrimary }]} numberOfLines={1}>PDF atual mantido</Text>
+                <Pressable onPress={pickPdf} hitSlop={10}>
+                  <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>Trocar</Text>
+                </Pressable>
+              </View>
             ) : pdfFile ? (
               <View style={[s.pdfRow, { backgroundColor: colors.container, borderColor: border }]}>
                 <View style={[s.pdfIconBox, { backgroundColor: `${colors.primary}20` }]}>
@@ -475,7 +619,7 @@ export default function CreateWorkScreen() {
                 <Text style={[s.pickerBtnText, { color: colors.primary }]}>Selecionar PDF</Text>
               </Pressable>
             )}
-            {!pdfFile && !isPdfLoading && (
+            {!pdfFile && !hasExistingPdf && !isPdfLoading && (
               <Text style={[s.helperText, { color: colors.textMuted }]}>Arquivo PDF obrigatório.</Text>
             )}
           </Section>
@@ -486,7 +630,7 @@ export default function CreateWorkScreen() {
       {/* ── Error modal ───────────────────────────────────────────────────── */}
       <ConfirmModal
         visible={!!errorMsg}
-        title="Erro ao publicar"
+        title={isEdit ? 'Erro ao salvar' : 'Erro ao publicar'}
         message={errorMsg}
         confirmLabel="OK"
         onConfirm={() => setErrorMsg('')}

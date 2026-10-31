@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, Pressable, TextInput, StyleSheet,
   KeyboardAvoidingView, Platform, ActivityIndicator, Image,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,10 +58,11 @@ function relativeTime(iso: string): string {
 
 // ─── CommentItem ──────────────────────────────────────────────────────────────
 
-function CommentItem({ comment, currentUserId, onMenu }: {
+function CommentItem({ comment, currentUserId, onMenu, onLike }: {
   comment: ApiComment;
   currentUserId: string | undefined;
   onMenu: (comment: ApiComment) => void;
+  onLike: (comment: ApiComment) => void;
 }) {
   const { colors } = useTheme();
   const isOwn = comment.authorId === currentUserId;
@@ -86,6 +87,16 @@ function CommentItem({ comment, currentUserId, onMenu }: {
         </View>
         <Text style={[styles.commentText, { color: colors.textSecondary }]}>{comment.text}</Text>
       </View>
+      <Pressable onPress={() => onLike(comment)} hitSlop={8} style={styles.commentLike}>
+        <Ionicons
+          name={comment.isLiked ? 'heart' : 'heart-outline'}
+          size={17}
+          color={comment.isLiked ? colors.primary : colors.textMuted}
+        />
+        {comment.likes > 0 && (
+          <Text style={[styles.commentLikeCount, { color: colors.textMuted }]}>{comment.likes}</Text>
+        )}
+      </Pressable>
     </View>
   );
 }
@@ -115,18 +126,21 @@ export default function PostDetailScreen() {
   const [editCommentVisible, setEditCommentVisible] = useState(false);
   const [editingComment, setEditingComment] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data } = await api.get(`/posts/${id}`);
-        setPost(data);
-      } catch (err) {
-        console.error('[PostDetail] carregar:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
-  }, [id]);
+  // Recarrega ao voltar da tela de edição
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        try {
+          const { data } = await api.get(`/posts/${id}`);
+          setPost(data);
+        } catch (err) {
+          console.error('[PostDetail] carregar:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+    }, [id]),
+  );
 
   const navBarHeight = Math.max(insets.bottom, 8) + 16 + 72;
   const bottomPad = navBarHeight + 64 + 8;
@@ -183,6 +197,22 @@ export default function PostDetailScreen() {
     }
   };
 
+  const handleLikeComment = async (comment: ApiComment) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const patch = (liked: boolean) => setPost(prev => prev ? {
+      ...prev,
+      comments: prev.comments.map(c => c.id === comment.id
+        ? { ...c, isLiked: liked, likes: Math.max(0, c.likes + (liked ? 1 : -1)) }
+        : c),
+    } : prev);
+    patch(!comment.isLiked);
+    try {
+      await api.post(`/comments/${comment.id}/like`);
+    } catch {
+      patch(comment.isLiked);
+    }
+  };
+
   const handleDeleteComment = async () => {
     if (!selectedComment || !post) return;
     setDeletingComment(true);
@@ -230,8 +260,18 @@ export default function PostDetailScreen() {
 
   const isOwnPost = post?.authorId === user?.id;
 
+  const openProfile = (authorId: string, username: string) => {
+    if (authorId === user?.id) router.push('/(app)/profile' as any);
+    else router.push({ pathname: '/user/[username]', params: { username } } as any);
+  };
+
   const postMenuActions: SheetAction[] = isOwnPost
     ? [
+        {
+          icon: 'create-outline',
+          label: 'Editar post',
+          onPress: () => router.push({ pathname: '/edit-post', params: { id: post!.id } }),
+        },
         {
           icon: 'trash-outline',
           label: 'Excluir post',
@@ -304,13 +344,13 @@ export default function PostDetailScreen() {
       >
         {/* Post */}
         <View style={[styles.postSection, { borderBottomColor: colors.borderDark }]}>
-          <View style={styles.authorRow}>
+          <Pressable style={styles.authorRow} onPress={() => openProfile(post.authorId, post.username)}>
             <Avatar userImage={post.userImage} username={post.username} size={48} />
             <View style={styles.authorInfo}>
               <Text style={[styles.authorName, { color: colors.textPrimary }]}>@{post.username}</Text>
               <Text style={[styles.authorMeta, { color: colors.textMuted }]}>{relativeTime(post.timePosted)}</Text>
             </View>
-          </View>
+          </Pressable>
 
           <Text style={[styles.postContent, { color: colors.textPrimary }]}>{post.caption}</Text>
 
@@ -377,6 +417,7 @@ export default function PostDetailScreen() {
                 key={comment.id}
                 comment={comment}
                 currentUserId={user?.id}
+                onLike={handleLikeComment}
                 onMenu={(c) => { setSelectedComment(c); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
               />
             ))
@@ -515,6 +556,8 @@ const styles = StyleSheet.create({
   commentUsername: { fontSize: 14, fontWeight: '600' },
   commentTime: { fontSize: 12 },
   commentText: { fontSize: 14, lineHeight: 20 },
+  commentLike: { alignItems: 'center', gap: 2, paddingTop: 2, minWidth: 24 },
+  commentLikeCount: { fontSize: 11 },
   inputBar: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 10, gap: 10, borderTopWidth: 1 },
   inputWrapper: { flex: 1, flexDirection: 'row', alignItems: 'center', borderRadius: 20, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8, gap: 8, minHeight: 42 },
   textInput: { flex: 1, fontSize: 14, maxHeight: 80, padding: 0 },

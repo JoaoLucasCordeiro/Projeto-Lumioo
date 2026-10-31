@@ -5,6 +5,7 @@ import { View, ActivityIndicator } from 'react-native';
 import NavFloatBar from '@/components/NavFloatBar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
+import { disconnectSocket } from '@/lib/socket';
 
 export default function AppLayout() {
   const { colors } = useTheme();
@@ -13,6 +14,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
+      disconnectSocket();
       router.replace('/auth/login');
     }
   }, [isLoading, isAuthenticated]);

@@ -19,9 +19,13 @@ import {
   type LatLng,
 } from "@/lib/mapCoordinates";
 
-const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+// Fundo escuro do Esri (ArcGIS), gratuito e sem chave de API. A CARTO passou a exigir chave
+// (os tiles voltam com a marca d'água "API KEY REQUIRED"). O Esri usa a ordem {z}/{y}/{x}.
+// A camada "Reference" é transparente e traz só os nomes das cidades e fronteiras.
+const TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}";
+const TILE_LABELS_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}";
+const TILE_MAX_ZOOM = 16;
+const TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ";
 
 const WORK_TYPE_OPTIONS = [
   { value: "TCC", label: "TCC" },
@@ -413,8 +417,9 @@ export function MapPage() {
                 <p className="text-slate-300">Carregando mapa...</p>
               </div>
             )}
-            <MapContainer center={[-8.0476, -37.5]} zoom={7} className="h-full w-full">
-              <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} />
+            <MapContainer center={[-8.0476, -37.5]} zoom={7} maxZoom={TILE_MAX_ZOOM} className="h-full w-full">
+              <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={TILE_MAX_ZOOM} />
+              <TileLayer url={TILE_LABELS_URL} maxZoom={TILE_MAX_ZOOM} />
               {points.map((point) => {
                 const total = point.works + point.projects;
                 const radius = Math.min(28, 8 + Math.sqrt(total) * 4);

@@ -56,6 +56,13 @@ function PostCard({ post, currentUserId, onLike, onSave, onMenuPress, onPress }:
   onPress: (post: ApiPost) => void;
 }) {
   const { colors } = useTheme();
+  const router = useRouter();
+
+  const openAuthor = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (post.authorId === currentUserId) router.push('/(app)/profile' as any);
+    else router.push({ pathname: '/user/[username]', params: { username: post.username } } as any);
+  };
 
   return (
     <Pressable
@@ -67,11 +74,13 @@ function PostCard({ post, currentUserId, onLike, onSave, onMenuPress, onPress }:
     >
       {/* Header */}
       <View style={styles.postHeader}>
-        <Avatar userImage={post.userImage} username={post.username} size={42} />
-        <View style={styles.postUserInfo}>
-          <Text style={[styles.postUserName, { color: colors.textPrimary }]}>@{post.username}</Text>
-          <Text style={[styles.postMeta, { color: colors.textMuted }]}>{relativeTime(post.timePosted)}</Text>
-        </View>
+        <Pressable onPress={openAuthor} style={styles.postAuthor}>
+          <Avatar userImage={post.userImage} username={post.username} size={42} />
+          <View style={styles.postUserInfo}>
+            <Text style={[styles.postUserName, { color: colors.textPrimary }]}>@{post.username}</Text>
+            <Text style={[styles.postMeta, { color: colors.textMuted }]}>{relativeTime(post.timePosted)}</Text>
+          </View>
+        </Pressable>
         <Pressable
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onMenuPress(post); }}
           hitSlop={10}
@@ -257,7 +266,11 @@ export default function FeedScreen() {
         <Pressable onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)} style={styles.headerBtn} hitSlop={8}>
           <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
         </Pressable>
-        <Pressable onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)} style={styles.headerBtn} hitSlop={8}>
+        <Pressable
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push('/messages' as any); }}
+          style={styles.headerBtn}
+          hitSlop={8}
+        >
           <Ionicons name="chatbubbles-outline" size={24} color={colors.textSecondary} />
         </Pressable>
       </View>
@@ -412,6 +425,7 @@ const styles = StyleSheet.create({
   headerBtn: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   postCard: { borderRadius: 20, borderWidth: 1, padding: 16 },
   postHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
+  postAuthor: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   postUserInfo: { flex: 1, marginLeft: 12 },
   postUserName: { fontSize: 15, fontWeight: '700' },
   postMeta: { fontSize: 12, marginTop: 1 },

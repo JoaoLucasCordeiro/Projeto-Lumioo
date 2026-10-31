@@ -35,6 +35,7 @@ interface AuthContextData {
   login: (identifier: string, password: string) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
+  updateUser: (patch: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
@@ -86,6 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }
 
+  // Sincroniza o usuário em memória e no SecureStore após editar o perfil
+  async function updateUser(patch: Partial<User>) {
+    if (!user) return;
+    const next = { ...user, ...patch };
+    setUser(next);
+    await SecureStore.setItemAsync('lumioo_user', JSON.stringify(next));
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -96,6 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
+        updateUser,
       }}
     >
       {children}

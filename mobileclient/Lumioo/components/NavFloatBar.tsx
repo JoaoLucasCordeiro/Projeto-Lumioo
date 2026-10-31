@@ -24,6 +24,9 @@ export default function NavFloatBar() {
 
   const bottomOffset = Math.max(insets.bottom, 8) + 16;
 
+  // Dentro de uma conversa a barra cobriria o campo de envio
+  if (pathname.startsWith('/chat')) return null;
+
   return (
     <View style={[styles.wrapper, { bottom: bottomOffset }]} pointerEvents="box-none">
       <BlurView intensity={28} tint="dark" style={styles.blur}>

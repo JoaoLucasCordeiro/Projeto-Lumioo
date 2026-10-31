@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, Pressable, TextInput, Image, ScrollView,
   ActivityIndicator, KeyboardAvoidingView, Platform, StyleSheet,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
@@ -12,6 +13,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/context/AuthContext';
 import { ConfirmModal } from '@/components/modals';
+import { LocationFields } from '@/components/LocationFields';
+import { EMPTY_LOCATION, validateLocation, locationPayload, type LocationValue } from '@/constants/geo';
 import api from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -41,6 +44,9 @@ export default function CreateProjectScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { id: editId } = useLocalSearchParams<{ id?: string }>();
+  const isEdit = !!editId;
 
   // Form state
   const [title, setTitle] = useState('');
@@ -50,6 +56,9 @@ export default function CreateProjectScreen() {
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [image, setImage] = useState<{ uri: string; base64: string } | null>(null);
+  const [imageChanged, setImageChanged] = useState(false);
+  const [location, setLocation] = useState<LocationValue>(EMPTY_LOCATION);
+  const [isLoadingProject, setIsLoadingProject] = useState(isEdit);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
 
   // Add member inline form
@@ -61,16 +70,49 @@ export default function CreateProjectScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // ── Carrega dados para edição ───────────────────────────────────────────────
+  // Categoria e equipe não são editáveis pela API (updateProject ignora ambos),
+  // e o detalhe não devolve e-mail/telefone de contato.
+
+  useEffect(() => {
+    if (!editId) return;
+    (async () => {
+      try {
+        const { data } = await api.get(`/projects/${editId}`);
+        setTitle(data.title);
+        setCategory(data.category);
+        setStatus(data.status);
+        setDescription(data.description);
+        setLocation({
+          campus: data.campus ?? '',
+          city: data.city ?? '',
+          state: data.state ?? '',
+          country: data.country ?? 'Brasil',
+        });
+        if (data.image) setImage({ uri: data.image, base64: data.image });
+      } catch {
+        setErrorMsg('Não foi possível carregar o projeto.');
+      } finally {
+        setIsLoadingProject(false);
+      }
+    })();
+  }, [editId]);
+
   // ── Validation ──────────────────────────────────────────────────────────────
+
+  const locationError = validateLocation(location);
 
   const canSubmit =
     title.trim().length > 0 &&
     category.length > 0 &&
     description.trim().length > 0 &&
-    teamMembers.length >= 1 &&
-    (status !== 'OPEN_FOR_APPLICATIONS' ||
+    locationError === null &&
+    (isEdit || teamMembers.length >= 1) &&
+    (isEdit ||
+      status !== 'OPEN_FOR_APPLICATIONS' ||
       (contactEmail.trim().length > 0 && contactPhone.trim().length > 0)) &&
-    !isSubmitting;
+    !isSubmitting &&
+    !isLoadingProject;
 
   // ── Image picker ────────────────────────────────────────────────────────────
 
@@ -89,6 +131,7 @@ export default function CreateProjectScreen() {
         uri: result.assets[0].uri,
         base64: `data:image/jpeg;base64,${result.assets[0].base64}`,
       });
+      setImageChanged(true);
     }
   };
 
@@ -116,21 +159,39 @@ export default function CreateProjectScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsSubmitting(true);
     try {
-      await api.post('/projects', {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        status,
-        ...(image ? { image: image.base64 } : {}),
-        ...(status === 'OPEN_FOR_APPLICATIONS'
-          ? { contactEmail: contactEmail.trim(), contactPhone: contactPhone.trim() }
-          : {}),
-        teamMembers: teamMembers.map(m => ({ name: m.name, role: m.role, photo: null })),
-      });
+      const contact = status === 'OPEN_FOR_APPLICATIONS'
+        ? {
+            ...(contactEmail.trim() ? { contactEmail: contactEmail.trim() } : {}),
+            ...(contactPhone.trim() ? { contactPhone: contactPhone.trim() } : {}),
+          }
+        : {};
+      if (isEdit) {
+        await api.put(`/projects/${editId}`, {
+          title: title.trim(),
+          description: description.trim(),
+          status,
+          ...contact,
+          ...locationPayload(location),
+          ...(imageChanged && image ? { image: image.base64 } : {}),
+        });
+      } else {
+        await api.post('/projects', {
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          status,
+          ...(image ? { image: image.base64 } : {}),
+          ...contact,
+          ...locationPayload(location),
+          teamMembers: teamMembers.map(m => ({ name: m.name, role: m.role, photo: null })),
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['project'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err: any) {
-      setErrorMsg(err?.response?.data?.error ?? 'Erro ao criar projeto.');
+      setErrorMsg(err?.response?.data?.error ?? (isEdit ? 'Erro ao salvar projeto.' : 'Erro ao criar projeto.'));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,7 +215,7 @@ export default function CreateProjectScreen() {
           <Ionicons name="close" size={20} color={colors.textSecondary} />
         </Pressable>
 
-        <Text style={[s.headerTitle, { color: colors.textPrimary }]}>Novo projeto</Text>
+        <Text style={[s.headerTitle, { color: colors.textPrimary }]}>{isEdit ? 'Editar projeto' : 'Novo projeto'}</Text>
 
         <Pressable
           onPress={handleSubmit}
@@ -163,7 +224,7 @@ export default function CreateProjectScreen() {
         >
           {isSubmitting
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={s.publishBtnText}>Publicar</Text>
+            : <Text style={s.publishBtnText}>{isEdit ? 'Salvar' : 'Publicar'}</Text>
           }
         </Pressable>
       </View>
@@ -186,11 +247,13 @@ export default function CreateProjectScreen() {
               placeholder="Nome do projeto"
               placeholderTextColor={colors.textMuted}
               maxLength={200}
-              autoFocus
+              autoFocus={!isEdit}
               autoCapitalize="sentences"
             />
           </Section>
 
+          {!isEdit && (
+            <>
           {/* ── Categoria ───────────────────────────────────────────────── */}
           <Section label="Categoria">
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
@@ -215,6 +278,8 @@ export default function CreateProjectScreen() {
               })}
             </ScrollView>
           </Section>
+            </>
+          )}
 
           {/* ── Status ──────────────────────────────────────────────────── */}
           <Section label="Status">
@@ -260,7 +325,7 @@ export default function CreateProjectScreen() {
 
           {/* ── Contato (condicional) ────────────────────────────────────── */}
           {status === 'OPEN_FOR_APPLICATIONS' && (
-            <Section label="Contato">
+            <Section label={isEdit ? 'Contato (vazio mantém o atual)' : 'Contato'}>
               <TextInput
                 style={[s.textInput, { color: colors.textPrimary, borderColor: border, backgroundColor: colors.container, marginBottom: 10 }]}
                 value={contactEmail}
@@ -282,13 +347,21 @@ export default function CreateProjectScreen() {
             </Section>
           )}
 
+          {/* ── Localização ─────────────────────────────────────────────── */}
+          <Section label="Localização">
+            <LocationFields value={location} onChange={setLocation} />
+          </Section>
+
           {/* ── Imagem do projeto ────────────────────────────────────────── */}
           <Section label="Imagem do projeto (opcional)">
             {image ? (
               <View style={s.imageWrapper}>
                 <Image source={{ uri: image.uri }} style={s.imagePreview} resizeMode="cover" />
-                <Pressable onPress={() => setImage(null)} style={s.imageRemoveBtn}>
-                  <Ionicons name="close" size={16} color="#fff" />
+                <Pressable
+                  onPress={isEdit ? pickImage : () => setImage(null)}
+                  style={s.imageRemoveBtn}
+                >
+                  <Ionicons name={isEdit ? 'swap-horizontal' : 'close'} size={16} color="#fff" />
                 </Pressable>
               </View>
             ) : (
@@ -302,6 +375,8 @@ export default function CreateProjectScreen() {
             )}
           </Section>
 
+          {!isEdit && (
+            <>
           {/* ── Membros da equipe ────────────────────────────────────────── */}
           <Section label={`Membros da equipe${teamMembers.length > 0 ? ` (${teamMembers.length})` : ''}`}>
 
@@ -388,6 +463,8 @@ export default function CreateProjectScreen() {
               </Text>
             )}
           </Section>
+            </>
+          )}
 
         </ScrollView>
       </KeyboardAvoidingView>

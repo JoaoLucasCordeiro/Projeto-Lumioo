@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -8,12 +8,19 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
+import { ConfirmModal, ActionSheet } from '@/components/modals';
+import { WORK_AREA_LABELS } from '@/constants/geo';
+import { startConversationWithUsername } from '@/lib/chat';
 import {
   useWorkDetail,
   WORK_TYPE_CONFIG,
@@ -80,7 +87,9 @@ function SectionLabel({ label }: { label: string }) {
   );
 }
 
-function SimpleAuthorCard({ name, username, coverColor }: { name: string; username: string; coverColor: string }) {
+function SimpleAuthorCard({ name, username, coverColor, onMessage, messaging }: {
+  name: string; username: string; coverColor: string; onMessage?: () => void; messaging?: boolean;
+}) {
   const { colors } = useTheme();
   return (
     <View style={[styles.authorCard, { backgroundColor: colors.container, borderColor: colors.border }]}>
@@ -100,6 +109,18 @@ function SimpleAuthorCard({ name, username, coverColor }: { name: string; userna
         <Text style={[styles.authorName, { color: colors.textPrimary }]}>{name}</Text>
         <Text style={[styles.authorUsername, { color: colors.textMuted }]}>@{username}</Text>
       </View>
+      {!!onMessage && (
+        <Pressable
+          onPress={onMessage}
+          disabled={messaging}
+          style={[styles.messageBtn, { borderColor: colors.primary }]}
+        >
+          {messaging
+            ? <ActivityIndicator size="small" color={colors.primary} />
+            : <Ionicons name="chatbubble-outline" size={14} color={colors.primary} />}
+          <Text style={[styles.messageBtnText, { color: colors.primary }]}>Mensagem</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -135,8 +156,24 @@ export default function WorkDetailScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const { data: work, isLoading, isError } = useWorkDetail(id ?? '');
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: work, isLoading, isError, refetch } = useWorkDetail(id ?? '');
   const [saved, setSaved] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deleteVisible, setDeleteVisible] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [busyFile, setBusyFile] = useState(false);
+  const [messaging, setMessaging] = useState(false);
+
+  // Recarrega ao voltar da edição (a primeira montagem já busca sozinha)
+  const firstFocus = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (firstFocus.current) { firstFocus.current = false; return; }
+      refetch();
+    }, [refetch]),
+  );
   const [downloadCount, setDownloadCount] = useState<number | null>(null);
   const [downloaded, setDownloaded] = useState(false);
 
@@ -185,27 +222,86 @@ export default function WorkDetailScreen() {
   const displayType = WORK_TYPE_LABEL[work.type];
   const currentDownloads = downloadCount ?? work.downloads;
 
-  const handleDownload = async () => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    try {
-      await api.get(`/works/${id}/download`);
-      if (!downloaded) {
-        setDownloadCount(currentDownloads + 1);
-        setDownloaded(true);
-      }
-    } catch {
-      // increment locally even if request fails
-      if (!downloaded) {
-        setDownloadCount(currentDownloads + 1);
-        setDownloaded(true);
-      }
+  const isOwner = !!user && work.authorUsername === user.username;
+
+  // Grava o PDF (data URI base64) no cache e abre a folha de compartilhamento/visualização
+  const openPdf = async (dataUri: string, title: string) => {
+    const base64 = dataUri.replace(/^data:[^;]*;base64,/, '');
+    const safeName = title.replace(/[^\w\-]+/g, '_').slice(0, 60) || 'trabalho';
+    const uri = `${FileSystem.cacheDirectory}${safeName}.pdf`;
+    await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+    if (!(await Sharing.isAvailableAsync())) {
+      Alert.alert('Arquivo salvo', 'Este dispositivo não permite abrir ou compartilhar o PDF.');
+      return;
     }
-    Alert.alert('Download iniciado', 'O trabalho está sendo baixado para o seu dispositivo.');
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf', dialogTitle: title });
   };
 
-  const handleView = () => {
+  const handleDownload = async () => {
+    if (busyFile) return;
+    setBusyFile(true);
+    try {
+      // O endpoint incrementa o contador de downloads no servidor
+      const { data } = await api.get<{ pdfFile: string; title: string }>(`/works/${id}/download`);
+      if (!downloaded) {
+        setDownloadCount(currentDownloads + 1);
+        setDownloaded(true);
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await openPdf(data.pdfFile, data.title);
+    } catch (err: any) {
+      const msg = err?.response?.status === 403
+        ? 'Você não tem acesso a este trabalho.'
+        : 'Não foi possível baixar o PDF. Tente novamente.';
+      Alert.alert('Erro no download', msg);
+    } finally {
+      setBusyFile(false);
+    }
+  };
+
+  // Visualizar usa o PDF já carregado no detalhe (não conta como download)
+  const handleView = async () => {
+    if (busyFile) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    Alert.alert('Visualizar', 'Abertura do PDF em breve.');
+    setBusyFile(true);
+    try {
+      await openPdf(work.fileUrl, work.title);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível abrir o PDF.');
+    } finally {
+      setBusyFile(false);
+    }
+  };
+
+  // Abre (ou cria) a conversa com o autor do trabalho
+  const handleContact = async () => {
+    if (messaging) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setMessaging(true);
+    try {
+      const conv = await startConversationWithUsername(work.authorUsername);
+      router.push({ pathname: '/chat/[id]', params: { id: conv.id } } as any);
+    } catch {
+      Alert.alert('Erro', 'Não foi possível abrir a conversa. Tente novamente.');
+    } finally {
+      setMessaging(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete(`/works/${id}`);
+      queryClient.invalidateQueries({ queryKey: ['works'] });
+      queryClient.removeQueries({ queryKey: ['work', id] });
+      setDeleteVisible(false);
+      router.back();
+    } catch (err: any) {
+      setDeleteVisible(false);
+      Alert.alert('Erro', err?.response?.data?.error ?? 'Não foi possível excluir o trabalho.');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Build info rows (conditionally)
@@ -254,6 +350,18 @@ export default function WorkDetailScreen() {
           >
             <Ionicons name="share-outline" size={20} color="#fff" />
           </Pressable>
+          {isOwner && (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setMenuVisible(true);
+              }}
+              hitSlop={10}
+              style={[styles.overlayBtn, { backgroundColor: 'rgba(15,23,42,0.65)' }]}
+            >
+              <Ionicons name="ellipsis-horizontal" size={20} color="#fff" />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -268,7 +376,7 @@ export default function WorkDetailScreen() {
           typeIcon={typeConfig.icon}
           typeLabel={displayType}
           title={work.title}
-          areaLabel={work.area}
+          areaLabel={WORK_AREA_LABELS[work.area] ?? work.area}
         />
 
         {/* Stats bar — downloads only */}
@@ -291,7 +399,7 @@ export default function WorkDetailScreen() {
               <Text style={[styles.typeBadgeText, { color: typeConfig.color }]}>{displayType}</Text>
             </View>
             <View style={[styles.areaBadge, { backgroundColor: `${coverColor}35` }]}>
-              <Text style={[styles.areaBadgeText, { color: accent }]}>{work.area}</Text>
+              <Text style={[styles.areaBadgeText, { color: accent }]}>{WORK_AREA_LABELS[work.area] ?? work.area}</Text>
             </View>
             <View style={{ flex: 1 }} />
             <Text style={[styles.publishedAt, { color: colors.textMuted }]}>{work.year}</Text>
@@ -310,6 +418,8 @@ export default function WorkDetailScreen() {
             name={work.author}
             username={work.authorUsername}
             coverColor={coverColor}
+            onMessage={isOwner ? undefined : handleContact}
+            messaging={messaging}
           />
         </View>
 
@@ -422,6 +532,36 @@ export default function WorkDetailScreen() {
           </Pressable>
         </View>
       </View>
+
+      <ActionSheet
+        visible={menuVisible}
+        title="Opções do trabalho"
+        actions={[
+          {
+            icon: 'create-outline',
+            label: 'Editar trabalho',
+            onPress: () => router.push({ pathname: '/create-work', params: { id: work.id } }),
+          },
+          {
+            icon: 'trash-outline',
+            label: 'Excluir trabalho',
+            destructive: true,
+            onPress: () => setDeleteVisible(true),
+          },
+        ]}
+        onClose={() => setMenuVisible(false)}
+      />
+
+      <ConfirmModal
+        visible={deleteVisible}
+        title="Excluir trabalho"
+        message="Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        destructive
+        loading={deleting}
+        onConfirm={handleDelete}
+        onClose={() => setDeleteVisible(false)}
+      />
     </View>
   );
 }
@@ -608,6 +748,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 12,
   },
+  messageBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 16, paddingHorizontal: 12, height: 32 },
+  messageBtnText: { fontSize: 12, fontWeight: '700' },
   authorInfo: { flex: 1 },
   authorName: {
     fontSize: 15,
